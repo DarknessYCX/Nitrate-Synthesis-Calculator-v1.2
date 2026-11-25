@@ -108,6 +108,23 @@
   .settings-dialog input{font-family:var(--sans)}
   .settings-dialog .settings-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
   #formulaAutoHint{min-height:1.5em;margin-top:8px;color:var(--teal);font-size:11.5px}
+  .lib-dialog{width:min(660px,calc(100vw - 32px))}
+  .lib-content{padding:14px 16px;max-height:62vh;overflow:auto}
+  .lib-note{font-size:11.5px;color:var(--ink2);line-height:1.6;margin:0 0 12px}
+  .lib-add{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px;align-items:flex-end}
+  .lib-add input{flex:1 1 140px;min-width:96px;font-family:var(--mono)}
+  .lib-add .lib-el{flex:0 0 84px;min-width:84px}
+  .lib-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .lib-table{width:100%;border-collapse:collapse;font-size:12px}
+  .lib-table th{font-size:10.5px;color:var(--ink2);font-weight:600;text-align:left;padding:5px 4px;border-bottom:1px solid var(--line)}
+  .lib-table th.r{text-align:right}
+  .lib-table td{padding:6px 4px;border-bottom:1px dotted var(--line);vertical-align:middle}
+  .lib-table td.f{font-family:var(--mono)}
+  .lib-table td.m{font-family:var(--mono);text-align:right;white-space:nowrap}
+  .lib-table td.op{white-space:nowrap;text-align:right}
+  .lib-table .mini{font-size:11px;padding:3px 7px}
+  .lib-empty{font-size:12px;color:var(--ink2);padding:14px 4px;text-align:center;border:1px dashed var(--line2);border-radius:3px}
+  .lib-tag{font-family:var(--mono);font-size:10px;color:var(--teal);background:var(--tealSoft);border-radius:2px;padding:1px 5px;margin-left:6px}
   @media print{
     body{zoom:1;background:#fff}
     .wrap{max-width:none;padding:0}
@@ -149,6 +166,7 @@
                 <option value="perovskite">钙钛矿 ABO₃（A:B = 1:1）</option>
                 <option value="spinel">尖晶石 AB₂O₄（A:B = 1:2）</option>
                 <option value="rp">RP 相钙钛矿 Aₙ₊₁BₙO₃ₙ₊₁</option>
+                <option value="other">其他氧化物（自由组成，按原子个数）</option>
               </select>
             </div>
             <div class="field hidden" id="rpNField" style="flex:0 0 120px">
@@ -189,6 +207,9 @@
               <label>产物摩尔质量 g/mol</label>
               <input type="number" id="prodM" step="any" min="0" placeholder="自动">
             </div>
+            <div class="field" style="flex:0 0 auto;justify-content:flex-end">
+              <label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" id="autoFormula" checked style="width:auto"> 由表格自动生成化学式</label>
+            </div>
           </div>
           <div id="formulaAutoHint" aria-live="polite"></div>
           <div class="unit-inline" style="margin-top:10px;display:block">化学式必须与晶位组成及结构氧含量一致；摩尔质量由化学式与 IUPAC 原子量实时计算。</div>
@@ -197,7 +218,7 @@
 
       <!-- ===== 3 元素与硝酸盐 ===== -->
       <section class="card">
-        <div class="card-head"><span class="num">3</span><h2>元素与硝酸盐</h2><span class="hint">化学式可改水合物数</span></div>
+        <div class="card-head"><span class="num">3</span><h2>元素与硝酸盐</h2><span class="hint">硝酸盐 / 氯化物 / 醋酸盐等均可</span></div>
         <div class="card-body">
           <div class="table-scroll">
             <table id="saltTable">
@@ -207,10 +228,11 @@
                   <th style="width:62px">晶位</th>
                   <th class="r" style="width:76px">占位比例</th>
                   <th class="r" style="width:76px">氧化态</th>
-                  <th style="width:204px">金属前驱体化学式</th>
-                  <th style="width:84px">形态</th>
+                  <th style="width:186px">金属前驱体化学式</th>
+                  <th class="r" style="width:74px">M</th>
+                  <th style="width:80px">形态</th>
                   <th class="r" style="width:84px">纯度 / 浓度</th>
-                  <th class="r" style="width:72px">密度</th>
+                  <th class="r" style="width:68px">密度</th>
                   <th class="r" style="width:118px">需称取</th>
                   <th style="width:28px"></th>
                 </tr>
@@ -223,6 +245,7 @@
             <select id="addSite" style="width:auto"><option value="A">添加到 A 位</option><option value="B">添加到 B 位</option></select>
             <button class="btn" id="addRow">+ 添加元素</button>
             <button class="btn" id="loadFromFormula">从产物化学式载入配比</button>
+            <button class="btn" id="libBtn">前驱体库</button>
             <button class="btn ghost" id="toggleSolvent">溶剂体积换算</button>
             <button class="btn ghost" id="resetBtn">重置</button>
           </div>
@@ -289,14 +312,14 @@
           <div class="summary">
             <dl>
               <dt>总金属 ΣM</dt><dd class="big" id="sTotal">—</dd>
-              <dt>结构计量 A+B</dt><dd id="sSum">—</dd>
+              <dt id="sSumLabel">结构计量 A+B</dt><dd id="sSum">—</dd>
               <dt>产物物质的量</dt><dd id="sProd">—</dd>
               <dt>产物摩尔质量</dt><dd id="sProdM">—</dd>
               <dt>理论产物质量</dt><dd id="sProdMass">—</dd>
               <dt>电荷平衡</dt><dd id="sCharge">—</dd>
             </dl>
           </div>
-          <div class="sec-title">硝酸盐</div>
+          <div class="sec-title">金属前驱体</div>
           <table class="res-table">
             <thead><tr><th>组分 / 化学式</th><th style="text-align:right">mmol</th><th style="text-align:right">称取</th></tr></thead>
             <tbody id="resSalts"></tbody>
@@ -358,6 +381,35 @@
   </form>
 </dialog>
 
+<dialog class="settings-dialog lib-dialog" id="libDialog" aria-labelledby="libTitle">
+  <form method="dialog" id="libForm">
+    <header>
+      <h2 id="libTitle">前驱体库</h2>
+      <button class="del" type="button" id="libClose" aria-label="关闭">×</button>
+    </header>
+    <div class="lib-content">
+      <p class="lib-note">可录入任意金属前驱体（硝酸盐、氯化物、醋酸盐、醇盐等），摩尔质量按化学式自动计算。保存后，表格中的化学式输入框可直接选到，下次打开仍然存在。</p>
+      <div class="lib-add">
+        <input class="lib-el" id="libEl" list="libElList" placeholder="元素 Sn" spellcheck="false" autocomplete="off">
+        <input id="libFormula" placeholder="化学式，如 SnCl2·2H2O" spellcheck="false" autocomplete="off">
+        <button class="btn primary" type="button" id="libAddBtn">保存</button>
+      </div>
+      <div class="lib-actions">
+        <button class="btn ghost" type="button" id="libSaveRows">保存当前表格中的全部前驱体</button>
+      </div>
+      <div id="libHint" class="lib-note" style="margin:12px 0 0;color:var(--teal);min-height:1.4em"></div>
+      <table class="lib-table">
+        <thead>
+          <tr><th style="width:64px">元素</th><th>前驱体化学式</th><th class="r" style="width:88px">M (g/mol)</th><th class="r" style="width:130px">操作</th></tr>
+        </thead>
+        <tbody id="libList"></tbody>
+      </table>
+    </div>
+  </form>
+</dialog>
+<datalist id="libElList"></datalist>
+<div id="datalistHost" style="display:none"></div>
+
 <script>
 /* ==================================================================
    化学核心：原子量、化学式解析、配比计算
@@ -383,6 +435,113 @@ const SALT_DEFAULTS = {
   Tb:'Tb(NO3)3·6H2O', Dy:'Dy(NO3)3·6H2O', Ho:'Ho(NO3)3·6H2O', Er:'Er(NO3)3·6H2O', Tm:'Tm(NO3)3·6H2O',
   Yb:'Yb(NO3)3·6H2O', Lu:'Lu(NO3)3·6H2O', Bi:'Bi(NO3)3·5H2O', Pb:'Pb(NO3)2'
 };
+
+/* ==================================================================
+   前驱体库：自定义前驱体化学式（含非硝酸盐）持久保存并可在表格中选用
+   ================================================================== */
+const LIB_KEY = 'nitrateCalc.precursors.v1';
+let precursorLib = {};
+
+function loadPrecursorLib(){
+  try{
+    const raw = localStorage.getItem(LIB_KEY);
+    if(!raw) return;
+    const o = JSON.parse(raw);
+    if(o && typeof o === 'object' && !Array.isArray(o)){
+      precursorLib = {};
+      Object.keys(o).forEach(el => {
+        if(!(el in AW) || !Array.isArray(o[el])) return;
+        precursorLib[el] = o[el]
+          .filter(item => item && typeof item.formula === 'string')
+          .map(item => ({ formula:item.formula, M:Number(item.M) || 0, ts:Number(item.ts) || 0 }));
+      });
+    }
+  }catch(e){ precursorLib = {}; }
+}
+
+function savePrecursorLib(){
+  try{ localStorage.setItem(LIB_KEY, JSON.stringify(precursorLib)); }catch(e){}
+}
+
+function libFormulaFor(el){
+  const list = precursorLib[el];
+  return list && list.length ? list[0].formula : '';
+}
+
+function addPrecursor(el, formula){
+  el = String(el || '').trim();
+  formula = String(formula || '').trim();
+  if(!el || !formula) return { ok:false, msg:'请填写元素和前驱体化学式' };
+  if(!(el in AW)) return { ok:false, msg:'未知元素符号 ' + el };
+  const p = parseFormula(formula);
+  if(!p.ok) return { ok:false, msg:'化学式无法解析：' + p.error };
+  if(!(p.counts[el] > 0)) return { ok:false, msg:'化学式中不含 ' + el + ' 原子' };
+  precursorLib[el] = precursorLib[el] || [];
+  precursorLib[el] = precursorLib[el].filter(item => item.formula !== formula);
+  precursorLib[el].unshift({ formula, M:p.M, ts:Date.now() });
+  precursorLib[el] = precursorLib[el].slice(0, 12);
+  savePrecursorLib();
+  refreshPrecursorDatalists();
+  renderLibList();
+  return { ok:true, msg:el + ' · ' + formula + ' 已保存（M = ' + p.M.toFixed(2) + ' g/mol）', M:p.M };
+}
+
+function removePrecursor(el, formula){
+  if(!precursorLib[el]) return;
+  precursorLib[el] = precursorLib[el].filter(item => item.formula !== formula);
+  if(!precursorLib[el].length) delete precursorLib[el];
+  savePrecursorLib();
+  refreshPrecursorDatalists();
+  renderLibList();
+}
+
+function precursorDatalist(el){
+  if(!el || !/^[A-Z][a-z]?$/.test(el)) return '';
+  const id = 'dl-' + el;
+  let dl = document.getElementById(id);
+  if(!dl){
+    dl = document.createElement('datalist');
+    dl.id = id;
+    document.getElementById('datalistHost').appendChild(dl);
+  }
+  const list = [];
+  if(SALT_DEFAULTS[el]) list.push(SALT_DEFAULTS[el]);
+  (precursorLib[el] || []).forEach(item => { if(list.indexOf(item.formula) < 0) list.push(item.formula); });
+  dl.innerHTML = list.map(f => '<option value="' + escapeHTML(f) + '"></option>').join('');
+  return id;
+}
+
+function refreshPrecursorDatalists(){
+  rowRefs.forEach(ref => {
+    const id = precursorDatalist(ref.r.el);
+    if(id) ref.saltIn.setAttribute('list', id);
+  });
+}
+
+function renderLibList(){
+  const body = document.getElementById('libList');
+  if(!body) return;
+  const entries = [];
+  Object.keys(precursorLib).forEach(el => {
+    precursorLib[el].forEach(item => entries.push({ el, formula:item.formula, M:item.M }));
+  });
+  entries.sort((a, b) => a.el.localeCompare(b.el) || b.M - a.M);
+  if(!entries.length){
+    body.innerHTML = '<tr><td colspan="4"><div class="lib-empty">还没有保存的前驱体。输入元素和化学式后点“保存”，或在表格中录入后点下方按钮批量保存。</div></td></tr>';
+    return;
+  }
+  body.innerHTML = entries.map(entry =>
+    '<tr>' +
+      '<td>' + escapeHTML(entry.el) + '</td>' +
+      '<td class="f">' + escapeHTML(entry.formula) + '</td>' +
+      '<td class="m">' + (entry.M > 0 ? entry.M.toFixed(2) : '—') + '</td>' +
+      '<td class="op">' +
+        '<button class="btn mini" data-act="use" data-el="' + escapeHTML(entry.el) + '" data-formula="' + escapeHTML(entry.formula) + '">填入表格</button> ' +
+        '<button class="btn mini ghost" data-act="del" data-el="' + escapeHTML(entry.el) + '" data-formula="' + escapeHTML(entry.formula) + '">删除</button>' +
+      '</td>' +
+    '</tr>'
+  ).join('');
+}
 
 /* 解析化学式：元素、括号、小数下标、水合物（· / *），返回摩尔质量与原子计数 */
 function parseFormula(input){
@@ -465,18 +624,23 @@ function defaultSite(el){
 }
 function defaultOxidation(el){
   if(['Li','Na','K','Ag'].indexOf(el) >= 0) return 1;
-  if(['Mg','Ca','Sr','Ba','Zn','Cd'].indexOf(el) >= 0) return 2;
-  if(['Al','Y','La','Ce','Pr','Nd','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Bi'].indexOf(el) >= 0) return 3;
+  if(['Mg','Ca','Sr','Ba','Zn','Cd','Sn','Pb','Cu','Ni'].indexOf(el) >= 0) return 2;
+  if(['Al','Y','La','Ce','Pr','Nd','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Bi','Fe','Cr'].indexOf(el) >= 0) return 3;
+  if(['Zr','Ti','Hf'].indexOf(el) >= 0) return 4;
+  if(['Nb','Ta'].indexOf(el) >= 0) return 5;
+  if(['Mo','W'].indexOf(el) >= 0) return 6;
   return 3;
 }
 const STRUCTURES = {
   perovskite:{ A:1, B:1, oxygen:3, cations:2, label:'钙钛矿 ABO₃' },
-  spinel:{ A:1, B:2, oxygen:4, cations:3, label:'尖晶石 AB₂O₄' }
+  spinel:{ A:1, B:2, oxygen:4, cations:3, label:'尖晶石 AB₂O₄' },
+  other:{ A:null, B:null, oxygen:null, cations:null, free:true, label:'其他氧化物（自由组成）' }
 };
-function recognizeStructure(counts){
+function recognizeStructure(counts, siteOf){
+  const resolveSite = siteOf || defaultSite;
   const cations = Object.keys(counts).filter(element => element !== 'O');
-  const aTotal = cations.reduce((sum, element) => sum + (defaultSite(element) === 'A' ? counts[element] : 0), 0);
-  const bTotal = cations.reduce((sum, element) => sum + (defaultSite(element) === 'B' ? counts[element] : 0), 0);
+  const aTotal = cations.reduce((sum, element) => sum + (resolveSite(element) === 'A' ? counts[element] : 0), 0);
+  const bTotal = cations.reduce((sum, element) => sum + (resolveSite(element) === 'B' ? counts[element] : 0), 0);
   const oxygen = counts.O || 0;
   const close = (a, b) => Math.abs(a - b) < 1e-6;
   if(!(aTotal > 0) || !(bTotal > 0)) return null;
@@ -496,7 +660,7 @@ function adaptFromFormula(parsed, match){
   const previousRows = new Map(st.rows.map(row => [row.el, row]));
   st.rows = elements.map(element => {
     const row = previousRows.get(element) || newRow(element, SALT_DEFAULTS[element] || '', parsed.counts[element]);
-    row.site = defaultSite(element);
+    row.site = (previousRows.get(element) && previousRows.get(element).site) || defaultSite(element);
     row.ratio = parsed.counts[element];
     return row;
   });
@@ -530,12 +694,17 @@ function structureInfo(){
     const formula = 'A' + subscript(n + 1) + 'B' + (n === 1 ? '' : subscript(n)) + 'O' + subscript(3 * n + 1);
     return { A:n + 1, B:n, oxygen:3 * n + 1, cations:2 * n + 1, label:'RP 相钙钛矿 ' + formula + '（n=' + n + '）' };
   }
+  if(st.structure === 'other') return STRUCTURES.other;
   return STRUCTURES[st.structure] || STRUCTURES.perovskite;
 }
 function updateStructureHint(){
   const structure = structureInfo();
   if(!structure){
     $('structureHint').textContent = 'RP 层数 n 必须为大于或等于 1 的整数。';
+    return;
+  }
+  if(structure.free){
+    $('structureHint').textContent = '其他氧化物：占位比例按原子个数计，不做位点归一化；氧含量由氧化态电荷平衡推出，表格改动后自动生成化学式。';
     return;
   }
   $('structureHint').textContent = 'A 位总占位量 ' + structure.A + '；B 位总占位量 ' + structure.B + '。各位点输入相对占位比例，计算时分别归一化。';
@@ -611,81 +780,215 @@ function num(x, d){
 /* ==================================================================
    计算
    ================================================================== */
+/* ==================================================================
+   由元素表反生成产物化学式，并自动匹配结构类别
+   ================================================================== */
+let syncingFormula = false;
+
+function countSubscript(value){
+  const rounded = Math.round(Number(value) * 10000) / 10000;
+  const text = String(rounded);
+  if(text === '1') return '';
+  // 整数用下标；非整比（如 0.6、0.02）保留普通数字，避免下标中出现小数点
+  return Number.isInteger(rounded) ? text.replace(/[0-9]/g, ch => '₀₁₂₃₄₅₆₇₈₉'[Number(ch)]) : text;
+}
+
+function compositionFromRows(){
+  const structure = structureInfo();
+  if(!structure) return null;
+  const rows = st.rows.filter(row => row.el && row.el in AW && isFinite(Number(row.ratio)) && Number(row.ratio) >= 0);
+  if(!rows.length) return null;
+  const counts = {};
+  if(structure.free){
+    let total = 0, charge = 0, complete = true;
+    rows.forEach(row => {
+      const ratio = Number(row.ratio);
+      counts[row.el] = ratio;
+      total += ratio;
+      const oxidation = (row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '') ? NaN : Number(row.oxidation);
+      if(!isFinite(oxidation)){ complete = false; } else { charge += ratio * oxidation; }
+    });
+    if(!complete || !(total > 0)) return null;
+    counts.O = charge / 2;
+  } else {
+    const siteSums = { A:0, B:0 };
+    rows.forEach(row => { siteSums[row.site] += Number(row.ratio); });
+    if(!(siteSums.A > 0) || !(siteSums.B > 0)) return null;
+    rows.forEach(row => { counts[row.el] = structure[row.site] * Number(row.ratio) / siteSums[row.site]; });
+    counts.O = structure.oxygen;
+  }
+  return counts;
+}
+
+function freeCountsFromRows(){
+  const rows = st.rows.filter(row => row.el && row.el in AW && isFinite(Number(row.ratio)) && Number(row.ratio) >= 0);
+  if(!rows.length) return null;
+  const counts = {};
+  let total = 0, charge = 0, complete = true;
+  rows.forEach(row => {
+    const ratio = Number(row.ratio);
+    counts[row.el] = ratio;
+    total += ratio;
+    const oxidation = (row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '') ? NaN : Number(row.oxidation);
+    if(!isFinite(oxidation)){ complete = false; } else { charge += ratio * oxidation; }
+  });
+  if(!complete || !(total > 0)) return null;
+  counts.O = charge / 2;
+  return counts;
+}
+
+function formulaFromRows(counts){
+  counts = counts || compositionFromRows();
+  if(!counts) return '';
+  const metals = [];
+  st.rows.forEach(row => { if(row.el && row.el in AW && counts[row.el] !== undefined && metals.indexOf(row.el) < 0) metals.push(row.el); });
+  if(!metals.length) return '';
+  return metals.map(el => el + countSubscript(counts[el])).join('') + 'O' + countSubscript(counts.O);
+}
+
+function syncFormulaFromRows(keepStructure){
+  if(syncingFormula) return;
+  const toggle = $('autoFormula');
+  if(toggle && !toggle.checked) return;
+  if(!structureInfo()) return;
+  let counts = compositionFromRows();
+  if(!counts) return;
+  const siteMap = {};
+  st.rows.forEach(row => { if(row.el && !(row.el in siteMap)) siteMap[row.el] = row.site; });
+  const siteOf = element => siteMap[element] || defaultSite(element);
+  // 用“比例即原子个数”的原始组成识别结构，避免被当前结构的位点归一化压掉原子计量
+  const free = freeCountsFromRows();
+  const match = recognizeStructure(free || counts, siteOf);
+  let hint = '';
+  const currentRp = st.structure === 'rp' ? Number(st.rpN) : null;
+  if(!keepStructure && match && (match.structure !== st.structure || (match.structure === 'rp' && match.n !== currentRp))){
+    st.structure = match.structure;
+    st.rpN = match.n;
+    $('structure').value = st.structure;
+    $('rpN').value = st.rpN;
+    $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+    updateStructureHint();
+    counts = compositionFromRows() || counts;
+    hint = '已自动识别并匹配：' + match.label + '。';
+  } else if(match){
+    hint = '结构匹配：' + match.label + '。';
+  } else {
+    hint = st.structure === 'other'
+      ? '自由组成：氧含量由氧化态电荷平衡推出。'
+      : '未匹配钙钛矿 / 尖晶石 / RP 相标准计量，结构类别保持不变。';
+  }
+  syncingFormula = true;
+  st.prodFormula = formulaFromRows();
+  $('prodFormula').value = st.prodFormula;
+  st.prodM = null;
+  $('prodM').value = '';
+  $('formulaAutoHint').textContent = hint;
+  paint();
+  syncingFormula = false;
+}
+
 function compute(){
   const structure = structureInfo();
-  const out = { ok:false, S:structure ? structure.cations : 0, N:0, rows:[], aux:[], conc:[], warnings:[], productM:null, coefficients:{} };
+  const isFree = !!(structure && structure.free);
+  const out = { ok:false, S:0, N:0, cations:0, oxygen:null, free:isFree, rows:[], aux:[], conc:[], warnings:[], productM:null, coefficients:{} };
   if(!structure){ out.warnings.push('RP 层数 n 必须为大于或等于 1 的整数。'); return out; }
   const amountValue = Number(st.amount);
   const excessValue = Number(st.auxExcess);
   if(!isFinite(amountValue) || amountValue < 0){ out.warnings.push('合成量必须是大于或等于 0 的有效数值。'); return out; }
   if(!isFinite(excessValue) || excessValue < 0){ out.warnings.push('螯合剂 / 燃料额外过量必须是大于或等于 0 的有效数值。'); return out; }
   if(!st.rows.length){ out.warnings.push('还没有元素，请先添加配比。'); return out; }
-  const seen = new Set();
-  for(const row of st.rows){
-    if(!row.el || !(row.el in AW)){ out.warnings.push('存在空白或无法识别的元素符号。'); continue; }
-    if(seen.has(row.el)) out.warnings.push(row.el + ' 被重复添加；同一元素不能分配到多个表格行或不同晶位。');
-    seen.add(row.el);
-  }
-  if(out.warnings.length) return out;
 
-  const siteSums = { A:0, B:0 };
+  // 行级校验：问题行单独标错，不阻断整表
+  const activeRows = [];
+  const seen = new Set();
   st.rows.forEach(row => {
     const ratio = Number(row.ratio);
-    if((row.site !== 'A' && row.site !== 'B') || !isFinite(ratio) || ratio < 0){
-      out.warnings.push(row.el + ' 的晶位或占位比例无效。');
-    } else {
-      siteSums[row.site] += ratio;
+    if(!row.el || !(row.el in AW)){ out.warnings.push('存在空白或无法识别的元素符号，该行已跳过。'); return; }
+    if(seen.has(row.el)){ out.warnings.push(row.el + ' 被重复添加；只保留第一行。'); return; }
+    if(!isFinite(ratio) || ratio < 0){ out.warnings.push(row.el + ' 的占位比例无效，该行已跳过。'); return; }
+    if(!isFree && row.site !== 'A' && row.site !== 'B'){ out.warnings.push(row.el + ' 的晶位无效，该行已跳过。'); return; }
+    seen.add(row.el);
+    activeRows.push(row);
+  });
+  const activeSet = new Set(activeRows);
+
+  // 化学计量系数
+  if(isFree){
+    // 其他氧化物：比例即原子个数，氧含量由电荷平衡推出
+    let total = 0, charge = 0, complete = true;
+    activeRows.forEach(row => {
+      const ratio = Number(row.ratio);
+      out.coefficients[row.el] = ratio;
+      total += ratio;
+      const oxidation = row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '' ? NaN : Number(row.oxidation);
+      if(!isFinite(oxidation)){ complete = false; } else { charge += ratio * oxidation; }
+    });
+    out.cations = total;
+    out.S = total;
+    out.oxygen = complete && total > 0 ? charge / 2 : null;
+    if(out.oxygen !== null) out.coefficients.O = out.oxygen;
+    if(!complete) out.warnings.push('氧化态未填写完整，无法推出氧含量与化学式；前驱体用量仍按总金属计算。');
+  } else {
+    const siteSums = { A:0, B:0 };
+    activeRows.forEach(row => { siteSums[row.site] += Number(row.ratio); });
+    ['A','B'].forEach(site => { if(!(siteSums[site] > 0)) out.warnings.push(site + ' 位没有有效元素占位。'); });
+    if(!(siteSums.A > 0) || !(siteSums.B > 0)){
+      st.rows.forEach(r => out.rows.push({ el:r.el, site:r.site, salt:r.salt, coefficient:0, ok:false, M:null, err:'该晶位没有有效占位，无法归一化' }));
+      return out;
     }
-  });
-  if(out.warnings.length) return out;
-  ['A','B'].forEach(site => {
-    if(!(siteSums[site] > 0)) out.warnings.push(site + ' 位没有有效元素占位。');
-  });
-  if(out.warnings.length) return out;
+    activeRows.forEach(row => {
+      out.coefficients[row.el] = structure[row.site] * Number(row.ratio) / siteSums[row.site];
+    });
+    out.coefficients.O = structure.oxygen;
+    out.cations = structure.cations;
+    out.S = structure.cations;
+    out.oxygen = structure.oxygen;
+  }
+  if(!(out.cations > 0)){ out.warnings.push('有效阳离子总量为 0，无法计算。'); return out; }
 
-  st.rows.forEach(row => {
-    const capacity = structure[row.site];
-    out.coefficients[row.el] = capacity * Number(row.ratio) / siteSums[row.site];
-  });
-  out.coefficients.O = structure.oxygen;
-
+  // 目标产物化学式：摩尔质量与组成校验
   let Mp = null;
   const pf = parseFormula(st.prodFormula);
-  if(!pf.ok){ out.warnings.push('目标产物化学式无效：' + pf.error); return out; }
-  const formulaElements = new Set(Object.keys(pf.counts).concat(Object.keys(out.coefficients)));
-  for(const element of formulaElements){
-    const expected = out.coefficients[element] || 0;
-    const actual = pf.counts[element] || 0;
-    if(Math.abs(expected - actual) > 1e-6){
-      out.warnings.push('目标产物化学式与晶位组成不一致：' + element + ' 应为 ' + num(expected, 4) + '，输入为 ' + num(actual, 4) + '。');
-    }
+  if(!pf.ok){
+    out.warnings.push('目标产物化学式无效：' + pf.error);
+  } else {
+    const elements = new Set(Object.keys(pf.counts).concat(Object.keys(out.coefficients)));
+    elements.forEach(element => {
+      const expected = out.coefficients[element];
+      if(expected === undefined || expected === null) return;
+      const actual = pf.counts[element] || 0;
+      if(Math.abs(expected - actual) > 1e-6){
+        out.warnings.push('目标产物化学式与晶位组成不一致：' + element + ' 应为 ' + num(expected, 4) + '，输入为 ' + num(actual, 4) + '。');
+      }
+    });
+    Mp = pf.M;
   }
-  if(out.warnings.length) return out;
-  Mp = pf.M;
-  if(st.prodM && st.prodM > 0) Mp = Number(st.prodM);
+  if(st.prodM && Number(st.prodM) > 0) Mp = Number(st.prodM);
   out.productM = Mp;
 
+  // 合成规模 → 总金属摩尔数
   const amt = amountValue;
   let N = 0;
   if(st.basis === 'metal'){
     N = st.amountUnit === 'mol' ? amt : amt / 1000;
   } else if(st.basis === 'productMol'){
     const np = st.amountUnit === 'mol' ? amt : amt / 1000;
-    N = np * structure.cations;
+    N = np * out.cations;
   } else {
-    if(!Mp){ out.warnings.push('按产物质量计量需要产物化学式或摩尔质量。'); return out; }
+    if(!Mp){ out.warnings.push('按产物质量计量需要有效的目标产物化学式或摩尔质量。'); return out; }
     const np = st.amountUnit === 'mg' ? (amt / 1000) / Mp : amt / Mp;
-    N = np * structure.cations;
+    N = np * out.cations;
   }
   out.N = N;
 
-  // 硝酸盐
+  // 前驱体（硝酸盐或其他金属盐）
   st.rows.forEach(r => {
     const p = parseFormula(r.salt);
     const ratio = Number(r.ratio) || 0;
     const coefficient = out.coefficients[r.el];
     let error = p.ok ? '' : p.error;
-    if(p.ok && !(Math.abs((p.counts[r.el] || 0) - 1) < 1e-8)){
+    if(!activeSet.has(r)) error = error || '该行未参与计算（元素、晶位或配比无效）';
+    if(p.ok && activeSet.has(r) && !(Math.abs((p.counts[r.el] || 0) - 1) < 1e-8)){
       error = '前驱体必须恰好含 1 个 ' + r.el + ' 原子；当前为 ' + num(p.counts[r.el] || 0, 3);
     }
     const assay = r.form === 'solution' ? Number(r.conc) : Number(r.purity);
@@ -695,9 +998,9 @@ function compute(){
     if(!error && r.form === 'solution' && (!(Number(r.density) > 0) || !isFinite(Number(r.density)))){
       error = '溶液密度必须大于 0。';
     }
-    const item = { el:r.el, site:r.site, salt:r.salt, ratio, coefficient, frac:coefficient / structure.cations, ok:!error, M:p.ok ? p.M : null, err:error };
+    const item = { el:r.el, site:r.site, salt:r.salt, ratio, coefficient, frac: out.cations ? (Number(coefficient) || 0) / out.cations : 0, ok:!error, M:p.ok ? p.M : null, err:error };
     if(item.ok){
-      item.n = N * coefficient / structure.cations;
+      item.n = N * coefficient / out.cations;
       item.m = item.n * p.M;
       if(r.form === 'solution'){
         const c = (Number(r.conc) || 0) / 100;
@@ -739,20 +1042,24 @@ function compute(){
   }
 
   // 产物与电荷平衡
-  if(Mp) out.productMass = (N / structure.cations) * Mp;
-  let charge = 0;
-  let chargeComplete = true;
-  st.rows.forEach(row => {
-    const oxidation = row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '' ? NaN : Number(row.oxidation);
-    if(!isFinite(oxidation)){ chargeComplete = false; }
-    else charge += out.coefficients[row.el] * oxidation;
-  });
-  if(chargeComplete){
-    const residual = charge - structure.oxygen * 2;
-    out.chargeBalance = { residual, ok:Math.abs(residual) < 0.05 };
-    if(!out.chargeBalance.ok) out.warnings.push('电荷不平衡：阳离子总价态 ' + num(charge, 3) + '，氧离子总电荷 −' + (structure.oxygen * 2) + '；残差 ' + num(residual, 3) + '。请核对氧化态或组成，计算器不会自动修改配方。');
-  } else {
-    out.warnings.push('至少一个元素未填写有效氧化态，无法检查电荷平衡。');
+  if(Mp) out.productMass = (N / out.cations) * Mp;
+  if(out.oxygen !== null && out.oxygen !== undefined){
+    let charge = 0;
+    let chargeComplete = true;
+    st.rows.forEach(row => {
+      const coeff = out.coefficients[row.el];
+      if(coeff === undefined) return;
+      const oxidation = row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '' ? NaN : Number(row.oxidation);
+      if(!isFinite(oxidation)){ chargeComplete = false; }
+      else charge += coeff * oxidation;
+    });
+    if(chargeComplete){
+      const residual = charge - out.oxygen * 2;
+      out.chargeBalance = { residual, ok:Math.abs(residual) < 0.05 };
+      if(!out.chargeBalance.ok) out.warnings.push('电荷不平衡：阳离子总价态 ' + num(charge, 3) + '，氧离子总电荷 −' + num(out.oxygen * 2, 3) + '；残差 ' + num(residual, 3) + '。请核对氧化态或组成，计算器不会自动修改配方。');
+    } else {
+      out.warnings.push('至少一个元素未填写有效氧化态，无法检查电荷平衡。');
+    }
   }
   out.rows.forEach(it => { if(!it.ok) out.warnings.push(it.el + ' 前驱体无效：' + it.err); });
   out.aux.forEach(it => { if(!it.ok) out.warnings.push(it.name + ' 的化学式无法解析：' + it.err); });
@@ -776,6 +1083,7 @@ function buildSaltRow(r, idx){
     '<td class="c-num"><input type="number" class="ratio" step="any" min="0"></td>' +
     '<td class="c-num"><input type="number" class="oxidation" step="any"></td>' +
     '<td><input type="text" class="salt" spellcheck="false"></td>' +
+    '<td class="cell-out mcell"></td>' +
     '<td><select class="form"><option value="solid">固体</option><option value="solution">溶液</option></select></td>' +
     '<td class="c-num"><input type="number" class="purity" step="any" min="0"></td>' +
     '<td class="c-num"><input type="number" class="density" step="any" min="0"></td>' +
@@ -790,8 +1098,12 @@ function buildSaltRow(r, idx){
   const purIn = tr.querySelector('.purity');
   const denIn = tr.querySelector('.density');
   const outCell = tr.querySelector('.out');
+  const mCell = tr.querySelector('.mcell');
   const delBtn = tr.querySelector('.del');
+  const dlId = precursorDatalist(r.el);
+  if(dlId) saltIn.setAttribute('list', dlId);
 
+  elIn.setAttribute('list', 'libElList');
   elIn.value = r.el; siteIn.value = r.site || defaultSite(r.el); saltIn.value = r.salt; ratioIn.value = r.ratio; oxidationIn.value = r.oxidation;
   formIn.value = r.form; purIn.value = r.form === 'solution' ? r.conc : r.purity; denIn.value = r.density;
   syncForm(r, formIn, purIn, denIn);
@@ -799,14 +1111,28 @@ function buildSaltRow(r, idx){
   elIn.addEventListener('input', () => {
     const old = r.el;
     r.el = elIn.value.trim();
-    if(!r.salt || r.salt === SALT_DEFAULTS[old]){ r.salt = SALT_DEFAULTS[r.el] || r.salt; saltIn.value = r.salt; }
+    if(!r.site || r.site === defaultSite(old)){ r.site = defaultSite(r.el); siteIn.value = r.site; }
+    const oldFormula = parseFormula(r.salt);
+    if(!r.salt || r.salt === SALT_DEFAULTS[old] || !oldFormula.ok || !(oldFormula.counts[r.el] > 0)){
+      r.salt = libFormulaFor(r.el) || SALT_DEFAULTS[r.el] || '';
+      saltIn.value = r.salt;
+    }
     if(r.oxidation === defaultOxidation(old)){ r.oxidation = defaultOxidation(r.el); oxidationIn.value = r.oxidation; }
+    const newDl = precursorDatalist(r.el);
+    if(newDl) saltIn.setAttribute('list', newDl); else saltIn.removeAttribute('list');
     paint();
+    syncFormulaFromRows();
   });
-  siteIn.addEventListener('change', () => { r.site = siteIn.value; paint(); });
+  siteIn.addEventListener('change', () => { r.site = siteIn.value; paint(); syncFormulaFromRows(); });
   saltIn.addEventListener('input', () => { r.salt = saltIn.value; paint(); });
-  ratioIn.addEventListener('input', () => { r.ratio = Number(ratioIn.value) || 0; paint(); });
-  oxidationIn.addEventListener('input', () => { r.oxidation = oxidationIn.value.trim() === '' ? null : Number(oxidationIn.value); r.autoOxidation = false; paint(); });
+  saltIn.addEventListener('change', () => {
+    const formula = saltIn.value.trim();
+    if(!formula) return;
+    const parsed = parseFormula(formula);
+    if(parsed.ok && parsed.counts[r.el] > 0) addPrecursor(r.el, formula);
+  });
+  ratioIn.addEventListener('input', () => { r.ratio = Number(ratioIn.value) || 0; paint(); syncFormulaFromRows(); });
+  oxidationIn.addEventListener('input', () => { r.oxidation = oxidationIn.value.trim() === '' ? null : Number(oxidationIn.value); r.autoOxidation = false; paint(); syncFormulaFromRows(); });
   formIn.addEventListener('change', () => {
     r.form = formIn.value;
     syncForm(r, formIn, purIn, denIn);
@@ -823,9 +1149,10 @@ function buildSaltRow(r, idx){
     tr.remove();
     rowRefs.splice(rowRefs.indexOf(ref), 1);
     paint();
+    syncFormulaFromRows();
   });
 
-  const ref = { r, tr, elIn, siteIn, saltIn, ratioIn, oxidationIn, formIn, purIn, denIn, outCell };
+  const ref = { r, tr, elIn, siteIn, saltIn, ratioIn, oxidationIn, formIn, purIn, denIn, outCell, mCell };
   rowRefs.push(ref);
   return tr;
 }
@@ -897,6 +1224,7 @@ function paint(){
   rowRefs.forEach(ref => {
     const item = res.rows[rowRefs.indexOf(ref)];
     ref.tr.classList.toggle('invalid', !!item && !item.ok);
+    if(ref.mCell) ref.mCell.textContent = (item && item.M) ? item.M.toFixed(2) : '—';
     if(!item){ ref.outCell.textContent = '—'; return; }
     if(!item.ok){
       ref.outCell.className = 'cell-out err';
@@ -926,6 +1254,7 @@ function paint(){
 
   // 摘要
   $('sTotal').textContent = res.ok ? fmtMmol(res.N) : '—';
+  $('sSumLabel').textContent = res.free ? '阳离子总数 Σc' : '结构计量 A+B';
   $('sSum').textContent = res.S ? res.S.toFixed(3) : '—';
   $('sProd').textContent = (res.ok && res.S > 0) ? fmtMmol(res.N / res.S) : '—';
   $('sProdM').textContent = res.productM ? res.productM.toFixed(2) + ' g/mol' : '—';
@@ -940,8 +1269,9 @@ function paint(){
   resSalts.innerHTML = '';
   res.rows.forEach(it => {
     const tr = document.createElement('tr');
+    const label = res.free ? escapeHTML(it.el) : escapeHTML(it.site + ' 位 · ' + it.el);
     if(!it.ok){
-      tr.innerHTML = '<td class="name">' + escapeHTML(it.site + ' 位 · ' + it.el) + '<span>' + escapeHTML(it.salt || '—') + '</span></td>' +
+      tr.innerHTML = '<td class="name">' + label + '<span>' + escapeHTML(it.salt || '—') + '</span></td>' +
         '<td class="n">—</td><td class="m" style="color:#b0522a">化学式有误</td>';
     } else {
       let amount;
@@ -950,7 +1280,7 @@ function paint(){
       } else {
         amount = fmtMass(it.mActual) + '<small>理论 ' + fmtMass(it.m) + '</small>';
       }
-      tr.innerHTML = '<td class="name">' + escapeHTML(it.site + ' 位 · ' + it.el) + ' · ' + (it.coefficient).toFixed(3) + '<span>' + escapeHTML(it.salt) + '</span></td>' +
+      tr.innerHTML = '<td class="name">' + label + ' · ' + (Number(it.coefficient) || 0).toFixed(3) + '<span>' + escapeHTML(it.salt) + '</span></td>' +
         '<td class="n">' + num(it.n * 1000, 3) + '</td><td class="m">' + amount + '</td>';
     }
     resSalts.appendChild(tr);
@@ -1009,7 +1339,7 @@ function buildText(){
   lines.push('结构 ' + ((structureInfo() || STRUCTURES.perovskite).label));
   lines.push('产物 ' + (st.prodFormula || '—') + '，' + $('basisHint').textContent + '：' + fmtMmol(res.N));
   lines.push('');
-  lines.push('—— 硝酸盐 ——');
+  lines.push('—— 金属前驱体 ——');
   res.rows.forEach(it => {
     if(!it.ok){ lines.push(it.el + ' ' + it.salt + ' 化学式有误'); return; }
     lines.push(it.site + ' 位 · ' + it.el + ' · ' + it.salt + '  ' + num(it.n * 1000, 3) + ' mmol  ' + fmtMass(it.mActual));
@@ -1021,7 +1351,7 @@ function buildText(){
     lines.push(it.name + '（' + it.formula + '）  ' + num(it.n * 1000, 3) + ' mmol  ' + fmtMass(it.mActual));
   });
   lines.push('');
-  lines.push('总金属 ' + fmtMmol(res.N) + '；结构计量 A+B = ' + res.S.toFixed(3));
+  lines.push('总金属 ' + fmtMmol(res.N) + '；' + (res.free ? '阳离子总数 Σc = ' : '结构计量 A+B = ') + res.S.toFixed(3));
   if(res.chargeBalance) lines.push('电荷平衡 ' + (res.chargeBalance.ok ? '通过' : '未通过，残差 ' + num(res.chargeBalance.residual, 3)));
   if(st.auxExcess > 0) lines.push('螯合剂 / 燃料额外过量 ' + st.auxExcess + '%');
   if(res.productMass !== undefined) lines.push('理论产物 ' + fmtMass(res.productMass) + '（M = ' + res.productM.toFixed(2) + ' g/mol）');
@@ -1035,7 +1365,7 @@ function buildCSV(){
   const rows = [['类型','晶位','组分','化学式','晶位化学计量系数','mmol','理论质量(g)','实称(g或mL)']];
   res.rows.forEach(it => {
     if(!it.ok) return;
-    rows.push(['硝酸盐', it.site, it.el, it.salt, it.coefficient, (it.n * 1000).toFixed(4), (it.m || 0).toFixed(6),
+    rows.push(['前驱体', res.free ? '' : it.site, it.el, it.salt, it.coefficient, (it.n * 1000).toFixed(4), (it.m || 0).toFixed(6),
       (it.msol !== undefined ? (it.msol.toFixed(6) + ' g 溶液') : (it.mActual || 0).toFixed(6))]);
   });
   res.aux.forEach(it => {
@@ -1140,11 +1470,12 @@ function load(){
 }
 
 function addElementRow(el, site){
-  const row = newRow(el, SALT_DEFAULTS[el] || '', 1);
+  const row = newRow(el, libFormulaFor(el) || SALT_DEFAULTS[el] || '', 1);
   row.site = site === 'A' ? 'A' : 'B';
   st.rows.push(row);
   saltBody.appendChild(buildSaltRow(row));
   paint();
+  syncFormulaFromRows();
 }
 
 /* 初始化 */
@@ -1155,7 +1486,7 @@ function addElementRow(el, site){
   const sel = $('addElement');
   const groups = [
     {label:'常用 A 位 / 主族', elements:['Li','Na','K','Mg','Ca','Sr','Ba','Y']},
-    {label:'过渡金属与其他', elements:['Al','Cr','Mn','Fe','Co','Ni','Cu','Zn','Zr','Ag','Cd','Bi','Pb']},
+    {label:'过渡金属与其他', elements:['Al','Ti','V','Cr','Mn','Fe','Co','Ni','Cu','Zn','Zr','Nb','Mo','Ag','Cd','In','Sn','Sb','Ta','W','Bi','Pb']},
     {label:'镧系元素', elements:['La','Ce','Pr','Nd','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu']}
   ];
   groups.forEach(group => {
@@ -1193,14 +1524,59 @@ function addElementRow(el, site){
     $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
     updateStructureHint();
     paint();
+    syncFormulaFromRows(true);
   });
   $('rpN').addEventListener('input', e => {
     st.rpN = Number(e.target.value);
     updateStructureHint();
     paint();
+    syncFormulaFromRows(true);
   });
   $('auxExcess').value = st.auxExcess;
   $('auxExcess').addEventListener('input', e => { st.auxExcess = Number(e.target.value) || 0; paint(); });
+
+  // 前驱体库
+  loadPrecursorLib();
+  const libDialog = $('libDialog');
+  const libHint = $('libHint');
+  const refreshLibElementOptions = () => {
+    $('libElList').innerHTML = Object.keys(AW).map(el => '<option value="' + el + '"></option>').join('');
+  };
+  refreshLibElementOptions();
+  renderLibList();
+  $('libBtn').addEventListener('click', () => { renderLibList(); libHint.textContent = ''; libDialog.showModal(); });
+  $('libClose').addEventListener('click', () => libDialog.close());
+  $('libAddBtn').addEventListener('click', () => {
+    const result = addPrecursor($('libEl').value.trim(), $('libFormula').value.trim());
+    libHint.textContent = result.msg;
+    if(result.ok){ $('libFormula').value = ''; refreshPrecursorDatalists(); }
+  });
+  $('libSaveRows').addEventListener('click', () => {
+    let saved = 0, failed = 0;
+    st.rows.forEach(row => {
+      const formula = String(row.salt || '').trim();
+      if(!row.el || !formula) return;
+      const result = addPrecursor(row.el, formula);
+      if(result.ok) saved += 1; else failed += 1;
+    });
+    libHint.textContent = '已保存 ' + saved + ' 条前驱体' + (failed ? '，' + failed + ' 条无法解析' : '') + '。';
+  });
+  $('libList').addEventListener('click', event => {
+    const button = event.target.closest('button[data-act]');
+    if(!button) return;
+    const el = button.dataset.el;
+    const formula = button.dataset.formula;
+    if(button.dataset.act === 'del'){ removePrecursor(el, formula); return; }
+    const row = st.rows.filter(item => item.el === el)[0];
+    if(!row){ libHint.textContent = '表格中还没有 ' + el + ' 这一行，请先添加元素。'; return; }
+    row.salt = formula;
+    const index = st.rows.indexOf(row);
+    if(rowRefs[index]) rowRefs[index].saltIn.value = formula;
+    libHint.textContent = '已填入 ' + el + ' 行：' + formula;
+    paint();
+  });
+  $('autoFormula').addEventListener('change', () => { if($('autoFormula').checked) syncFormulaFromRows(); });
+  refreshPrecursorDatalists();
 
   // 方法切换
   document.querySelectorAll('#methodSwitch button').forEach(b => {
