@@ -4,7 +4,7 @@
 
 Design a cation composition by crystal structure and crystallographic site, enter the synthesis scale, and get the mass of each precursor — hydrated nitrate, chloride, acetate, alkoxide or any formula you type — together with the EDTA / citric acid / glycine quantities, for either the EDTA sol–gel route or the nitrate combustion route.
 
-- **Live demo:** https://darknessycx.github.io/Nitrate-Synthesis-Calculator-v1.0/
+- **Live demo:** https://darknessycx.github.io/Nitrate-Synthesis-Calculator-v1.2/
 - **Interface language:** Chinese (the calculator itself); documentation in English.
 - **Dependencies:** none. One `index.html`, no build step, no server, works offline from `file://`.
 
