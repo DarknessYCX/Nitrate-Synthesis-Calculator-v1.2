@@ -1,8 +1,8 @@
 # Nitrate Synthesis Calculator
 
-**A single-file, browser-based batch-sheet calculator for hydrated nitrate precursors in oxide synthesis.**
+**A single-file, browser-based batch-sheet calculator for metal-organic / nitrate precursors in oxide synthesis.**
 
-Design a cation composition by crystal structure and crystallographic site, enter the synthesis scale, and get the mass of each hydrated nitrate — together with the EDTA / citric acid / glycine quantities — for either the EDTA sol–gel route or the nitrate combustion route.
+Design a cation composition by crystal structure and crystallographic site, enter the synthesis scale, and get the mass of each precursor — hydrated nitrate, chloride, acetate, alkoxide or any formula you type — together with the EDTA / citric acid / glycine quantities, for either the EDTA sol–gel route or the nitrate combustion route.
 
 - **Live demo:** https://darknessycx.github.io/Nitrate-Synthesis-Calculator-v1.0/
 - **Interface language:** Chinese (the calculator itself); documentation in English.
@@ -18,7 +18,7 @@ This calculator formalizes that step. It
 
 1. builds the composition from **crystallographic sites** (A/B for perovskites and spinels, Aₙ₊₁Bₙ for RP phases) instead of a single flat list of ratios,
 2. converts a requested **synthesis scale** into total metal moles,
-3. resolves each **hydrated nitrate** to a molar mass from its chemical formula,
+3. resolves each **precursor** (nitrate or any other metal salt) to a molar mass from its chemical formula,
 4. applies **reagent purity** or **solution concentration** to give the quantity to actually weigh or pipette,
 5. and adds the **chelating agent / fuel** load for the selected synthesis route.
 
@@ -30,7 +30,8 @@ It is intended for research groups preparing perovskite, spinel and RP-type oxid
 
 ### Composition design
 
-- Three structure families with **independent A-site and B-site normalization** (relative occupancies are normalized per site, not globally).
+- Four structure options: perovskite, spinel, RP, and **other oxides (free composition)** — the first three use **independent A-site and B-site normalization** (relative occupancies are normalized per site, not globally); free composition treats the occupancy column as literal atom counts.
+- **Automatic formula generation**: after elements are added or edited in the table, the target product formula in section 2 and the structure class in section 1 are rebuilt and matched automatically (cubic perovskite / spinel / RP / other oxide). Can be switched off with the *generate formula from table* checkbox.
 - Editable **oxidation state** per cation, with an automatic estimate for a single B-site cation once the A-site charge is known.
 - **Charge-balance check** against the structure oxygen content; the residual is reported and a warning is raised when it is out of tolerance.
 - **Target product formula** field: molar mass is parsed from the formula, the composition is checked element by element against the site model, and common stoichiometries are recognized automatically.
@@ -40,10 +41,13 @@ It is intended for research groups preparing perovskite, spinel and RP-type oxid
 ### Precursors
 
 - Per-row precursor formula, editable — change `·6H2O` to `·4H2O` and the molar mass follows.
+- **Any metal precursor** can be typed in, not only nitrates: `SnCl2·2H2O`, `TiCl4`, `Fe(OAc)3`, `ZrO(NO3)2·2H2O`, etc. The molar mass is parsed from the formula and displayed in the new **M** column.
+- **Precursor library** — every formula you type (or explicitly save) is stored per element in `localStorage`, offered as a dropdown in the formula field, reused automatically when the element is added, and still available after a reload. A dialog (「前驱体库」) lists saved formulas with their molar mass, can apply one to an existing row, delete entries, or bulk-save the whole table.
 - Formula parser supports nested parentheses, decimal subscripts (`La0.6…`), and hydrate notation with `·`, `•` or `*`.
 - **Solid reagents:** reagent purity (%) → "weigh this much".
 - **Solution reagents:** mass fraction (%) + density (g/mL) → solution mass **and** pipetting volume (e.g. 50 wt% Mn(NO₃)₂).
 - Validation: the precursor must contain exactly **one** atom of the target element; duplicate element rows are rejected.
+- Rows are validated **individually**: a bad formula or missing site marks that row in red with its reason, while the remaining rows keep computing — one typo no longer blanks the whole batch sheet.
 
 ### Synthesis scale
 
@@ -82,8 +86,11 @@ Three interchangeable bases:
 | Perovskite | ABO₃ | 1 | 1 | 3 | 2 |
 | Spinel | AB₂O₄ | 1 | 2 | 4 | 3 |
 | RP (Ruddlesden–Popper) | Aₙ₊₁BₙO₃ₙ₊₁ | n + 1 | n | 3n + 1 | 2n + 1 |
+| Other oxide | free composition | — | — | from charge balance | Σ atom counts |
 
 RP phases require an **integer n ≥ 1**; n = 1 (A₂BO₄, e.g. La₂NiO₄) and n = 2 (A₃B₂O₇) are the common cases.
+
+**Other oxides (free composition)** are for non-stoichiometric, doped, deficient or multi-phase target compositions that do not fit ABO₃ / AB₂O₄ / RP: the occupancy column is read as the literal number of atoms per formula unit (e.g. `Ba1 Zr1 Zn0.02`), no site normalization is applied, and the oxygen count is derived from electroneutrality, `O = Σ(cᵢ zᵢ)/2`. The derived formula is written to the product-formula field and used for the molar mass; the summary reports 阳离子总数 Σc instead of A + B.
 
 Automatic recognition from the product formula uses exact stoichiometry: A-site total = 1, B-site total = 1, O = 3 (perovskite); A = 1, B = 2, O = 4 (spinel); A = n + 1, B = n, O = 3n + 1 (RP). Anything that does not match exactly leaves the structure unchanged and shows a notice.
 
@@ -110,7 +117,7 @@ For a structure with site capacities *N*<sub>A</sub>, *N*<sub>B</sub> and relati
 c_i = N_site(i) × r_i / Σ r_site(i)
 ```
 
-so the A-site cations sum to *N*<sub>A</sub> and the B-site cations sum to *N*<sub>B</sub>. Summing all cation coefficients gives the structural coefficient per formula unit, `A + B` (2 for perovskite, 3 for spinel, 2n + 1 for RP).
+so the A-site cations sum to *N*<sub>A</sub> and the B-site cations sum to *N*<sub>B</sub>. Summing all cation coefficients gives the structural coefficient per formula unit, `A + B` (2 for perovskite, 3 for spinel, 2n + 1 for RP, Σr for a free composition).
 
 ### 2. Scale conversion
 
@@ -156,7 +163,8 @@ The residual is reported in the summary (`平衡` when |residual| < 0.05, otherw
 
 - The parsed product formula must match the site-derived coefficients element by element (tolerance 10⁻⁶); mismatches are listed explicitly.
 - Non-stoichiometry written as `+δ` / `−δ` is accepted for the formula, but molar mass is computed from the base oxygen content and a note is displayed.
-- Invalid chemistry (missing A-site, unknown element, zero ratios, malformed formula) blocks the calculation and surfaces the reason.
+- A missing A- or B-site (in a site-normalized structure) stops the site normalization and says so, row by row.
+- Other invalid chemistry (unknown element, zero or negative ratio, malformed precursor formula, purity outside (0, 100], non-positive density) is reported on the affected row; the rest of the sheet is still calculated.
 
 ---
 
@@ -164,7 +172,7 @@ The residual is reported in the summary (`平衡` when |residual| < 0.05, otherw
 
 1. Open `index.html` (or the Pages link) in a modern browser — no installation needed.
 2. Choose the **crystal structure**; for RP phases set **n**.
-3. Type the **product formula** (e.g. `La0.6Sr0.4MnO3`) and press **Load composition from product formula**, or add elements one by one and set their **A/B site** and **relative occupancy**.
+3. Type the **product formula** (e.g. `La0.6Sr0.4MnO3`) and press **Load composition from product formula**, or add elements one by one and set their **A/B site** and **relative occupancy**. When *generate formula from table* is on, the formula and structure class update themselves as you edit the table.
 4. Enter the **oxidation state** of each cation if you want the charge-balance check (a single B-site cation is estimated automatically).
 5. Select the **synthesis route** and adjust the chelator / fuel ratios or excess if your recipe differs.
 6. Enter the **synthesis scale** using any of the three bases.
@@ -202,6 +210,8 @@ Selecting **solution** for Mn(NO₃)₂·4H₂O with 50 wt% and ρ = 1.54 g/mL g
 - **Solution mode** assumes a homogeneous solution of the stated mass fraction and density; temperature effects are ignored.
 - **RP phases** accept integer n only; intergrowth or mixed n = 1/2 composites are not modeled.
 - **Anion doping, A-site deficiency, δ non-stoichiometry** are not part of the mass balance; a δ-ended formula is accepted for molar mass only, with a note.
+- **Non-nitrate precursors are handled as mass sources only.** The counter-anion (Cl⁻, CH₃COO⁻, alkoxide) is not modeled: no side products, no anion removal step, no effect on the combustion redox balance. Chlorides and acetates may need extra calcination or washing — the calculator does not judge that.
+- **Free-composition oxides** take the oxygen content from the oxidation states you enter; if a cation's oxidation state is left empty, the oxygen count and product formula cannot be derived, and only the metal masses are reported.
 - **No upper bound on scale.** Very large batches are arithmetically fine but practically limited by solubility.
 - **Local data only.** Inputs live in the browser's `localStorage`; nothing is uploaded. Clearing site data resets the sheet.
 - **Safety.** Nitrates are oxidizers and several hydrates are hygroscopic or shock-sensitive when dried with organics; combustion runs release NOₓ/CO₂. This tool only computes masses — it does not replace a risk assessment or standard lab practice.
@@ -222,6 +232,15 @@ Deployment: GitHub Pages serves `index.html` from the `main` branch.
 ---
 
 ## Version History
+
+**v1.1.0 — 2026-11-25**
+
+- Arbitrary metal precursors: type any formula (chloride, acetate, alkoxide, oxynitrate…); molar mass shown in a new **M** column.
+- Persistent **precursor library** with per-element dropdowns, apply-to-row, delete and bulk save from the table.
+- New structure option **Other oxide (free composition)**: atom-count ratios, no site normalization, oxygen from charge balance, Σc in the summary.
+- Automatic product-formula generation and structure matching from the element table, with an opt-out checkbox.
+- Per-row validation: invalid rows are flagged individually instead of aborting the whole calculation.
+- Expanded default oxidation states and element menu (Ti, V, Nb, Ta, Mo, W, In, Sn, Sb…).
 
 **v1.0.0 — 2026-11-25**
 
