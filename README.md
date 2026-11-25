@@ -184,13 +184,13 @@ La₀.₆Sr₀.₄MnO₃, perovskite, total metal ΣM = 2.000 mmol, EDTA route, 
 
 | Component | Site | mmol | Theoretical | Weigh (99%) |
 |---|---|---|---|---|
-| La(NO₃)₃·6H₂O | A | 0.600 | 259.8 mg | 262.4 mg |
-| Sr(NO₃)₂ | A | 0.400 | 84.7 mg | 85.5 mg |
-| Mn(NO₃)₂·4H₂O | B | 1.000 | 251.0 mg | 253.5 mg |
-| EDTA (free acid) | — | 2.000 | 584.5 mg | 590.4 mg |
-| Citric acid·H₂O | — | 4.000 | 840.6 mg | 849.0 mg |
+| La(NO₃)₃·6H₂O | A | 0.600 | 259.8042 mg | 262.4285 mg |
+| Sr(NO₃)₂ | A | 0.400 | 84.6512 mg | 85.5063 mg |
+| Mn(NO₃)₂·4H₂O | B | 1.000 | 251.0060 mg | 253.5414 mg |
+| EDTA (free acid) | — | 2.000 | 584.4880 mg | 590.3919 mg |
+| Citric acid·H₂O | — | 4.000 | 840.5520 mg | 849.0424 mg |
 
-Product: 1.000 mmol, M = 221.33 g/mol, theoretical mass 221.3 mg; charge balance: 平衡 (0.6×3 + 0.4×2 + 1×3.4 = 6 = 3×2).
+Product: 1.000 mmol, M = 221.33 g/mol, theoretical mass 221.3260 mg; charge balance: 平衡 (0.6×3 + 0.4×2 + 1×3.4 = 6 = 3×2).
 
 ### Solution precursor example
 
@@ -233,14 +233,17 @@ Deployment: GitHub Pages serves `index.html` from the `main` branch.
 
 ## Version History
 
-**v1.1.0 — 2026-11-25**
+**V1.2 — 2026-11-25**
 
-- Arbitrary metal precursors: type any formula (chloride, acetate, alkoxide, oxynitrate…); molar mass shown in a new **M** column.
+- Arbitrary metal precursors: any formula (chloride, acetate, alkoxide, oxynitrate…); molar mass shown in a new **M** column.
 - Persistent **precursor library** with per-element dropdowns, apply-to-row, delete and bulk save from the table.
-- New structure option **Other oxide (free composition)**: A/B sites hidden from the table, atom-count ratios, explicit **oxygen atom** field (or oxygen from charge balance when left empty), Σc in the summary; non-standard formulas loaded from the target-formula field switch to this mode automatically.
+- New structure option **Other oxide (free composition)**: A/B sites hidden, atom-count ratios, optional **oxygen atom** field (leave it empty and oxygen follows the oxidation states), Σc in the summary; non-standard formulas loaded from the target-formula field switch to this mode automatically instead of being forced into the 1:1 perovskite normalization.
+- A/B sites are assigned automatically when free atom counts reproduce a standard perovskite / spinel / RP stoichiometry.
 - Automatic product-formula generation and structure matching from the element table, with an opt-out checkbox.
 - Per-row validation: invalid rows are flagged individually instead of aborting the whole calculation.
 - Expanded default oxidation states and element menu (Ti, V, Nb, Ta, Mo, W, In, Sn, Sb…).
+- **All masses displayed and exported to 4 decimal places** (g / mg / µg), matching a four-place balance reading.
+- Version badge in the page header, footer and browser title (two-segment version number from V1.2 on).
 
 **v1.0.0 — 2026-11-25**
 
@@ -277,3 +280,5 @@ Released under the **MIT License**. See [LICENSE](LICENSE) for the full text.
 ## Disclaimer
 
 This software is a stoichiometry aid for research use. The authors give no warranty of fitness for a particular synthesis and accept no liability for experimental outcomes. Verify every number against your own reagents and protocol before weighing.
+
+> （注：部分内容由豆包 AI 生成）

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>氧化物材料合成计算器</title>
+<title>氧化物材料合成计算器 V1.2</title>
 <style>
   :root{
     --ink:#16231f; --ink2:#4d5b55; --paper:#f6f4ee; --panel:#fffdf8;
@@ -135,6 +135,8 @@
     .panel-body{max-height:none;overflow:visible}
   }
   #saltTable.free-mode th:nth-child(2), #saltTable.free-mode td:nth-child(2) { display:none; }
+  .ver-line{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+  .ver{font-family:var(--mono);font-size:11px;letter-spacing:.08em;padding:2px 8px;border:1px solid var(--line2);border-radius:999px;color:var(--ink2);background:#fff;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -142,7 +144,7 @@
 
   <header class="top">
     <div class="title-box">
-      <span class="lab">hydrated nitrate · batch sheet</span>
+      <div class="ver-line"><span class="lab">hydrated nitrate · batch sheet</span><span class="ver" id="verBadge">V1.2</span></div>
       <h1>氧化物材料合成计算器</h1>
       <p>按晶体结构和晶位占位设计配方，计算前驱体及螯合剂 / 燃料称取量</p>
     </div>
@@ -350,7 +352,7 @@
   </div>
 
   <footer>
-    <span>摩尔质量 = Σ(原子量 × 原子个数)，IUPAC 2021 标准原子量；水合物按化学式自动折算</span>
+    <span>摩尔质量 = Σ(原子量 × 原子个数)，IUPAC 2021 标准原子量；水合物按化学式自动折算 · <b class="ver" style="border:0;padding:0;background:none">V1.2</b></span>
     <span id="footStamp"></span>
   </footer>
 </div>
@@ -820,9 +822,10 @@ let st = {
 function fmtMass(g){
   if(!isFinite(g) || g === null) return '—';
   const mg = g * 1000;
-  if(Math.abs(g) >= 1) return g.toFixed(3) + ' g';
-  if(Math.abs(mg) >= 1) return mg.toFixed(1) + ' mg';
-  if(Math.abs(mg) >= 0.01) return (mg * 1000).toFixed(0) + ' µg';
+  // 质量统一保留 4 位小数，便于直接对照天平读数
+  if(Math.abs(g) >= 1) return g.toFixed(4) + ' g';
+  if(Math.abs(mg) >= 1) return mg.toFixed(4) + ' mg';
+  if(Math.abs(mg) >= 0.01) return (mg * 1000).toFixed(4) + ' µg';
   return '≈ 0';
 }
 function fmtMmol(mol){
@@ -1443,13 +1446,13 @@ function buildCSV(){
   const rows = [['类型','晶位','组分','化学式','晶位化学计量系数','mmol','理论质量(g)','实称(g或mL)']];
   res.rows.forEach(it => {
     if(!it.ok) return;
-    rows.push(['前驱体', res.free ? '' : it.site, it.el, it.salt, it.coefficient, (it.n * 1000).toFixed(4), (it.m || 0).toFixed(6),
-      (it.msol !== undefined ? (it.msol.toFixed(6) + ' g 溶液') : (it.mActual || 0).toFixed(6))]);
+    rows.push(['前驱体', res.free ? '' : it.site, it.el, it.salt, it.coefficient, (it.n * 1000).toFixed(4), (it.m || 0).toFixed(4),
+      (it.msol !== undefined ? (it.msol.toFixed(4) + ' g 溶液') : (it.mActual || 0).toFixed(4))]);
   });
   res.aux.forEach(it => {
     if(!it.ok) return;
     rows.push([st.method === 'edta' ? '螯合剂' : '燃料', '', it.name, it.formula, it.per, (it.n * 1000).toFixed(4),
-      it.m.toFixed(6), (it.mActual || 0).toFixed(6)]);
+      it.m.toFixed(4), (it.mActual || 0).toFixed(4)]);
   });
   return rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
 }
