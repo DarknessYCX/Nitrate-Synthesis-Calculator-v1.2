@@ -1,0 +1,1364 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>氧化物材料合成计算器</title>
+<style>
+  :root{
+    --ink:#16231f; --ink2:#4d5b55; --paper:#f6f4ee; --panel:#fffdf8;
+    --line:#e2dbcb; --line2:#cdc4b0; --teal:#116b5b; --tealSoft:#e5f0ea;
+    --rust:#b0522a; --mono:"Times New Roman","SimSun",serif;
+    --sans:"Times New Roman","SimSun","Microsoft YaHei",serif;
+    --ui-zoom:1;
+  }
+  *{box-sizing:border-box}
+  body{zoom:var(--ui-zoom);margin:0;padding:0;background:radial-gradient(1100px 560px at 100% -8%,#ecf2ed 0,rgba(255,255,255,0) 62%),var(--paper);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1440px;margin:0 auto;padding:26px 22px 56px}
+  header.top{display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end;justify-content:space-between;padding-bottom:15px;border-bottom:2px solid var(--ink);margin-bottom:22px}
+  .lab{font-family:var(--mono);font-size:11px;color:var(--teal);letter-spacing:1.6px;text-transform:uppercase;display:block;margin-bottom:7px}
+  .title-box h1{margin:0 0 5px;font-size:26px;font-weight:700;letter-spacing:.4px}
+  .title-box p{margin:0;color:var(--ink2);font-size:13px}
+  .method-switch{display:flex;border:1.5px solid var(--ink);border-radius:3px;overflow:hidden;background:var(--panel)}
+  .method-switch button{appearance:none;border:0;border-right:1.5px solid var(--ink);background:transparent;padding:9px 16px;cursor:pointer;font-family:var(--sans);font-size:13px;color:var(--ink);transition:.15s;line-height:1.3}
+  .method-switch button:last-child{border-right:0}
+  .method-switch button .sub{display:block;font-family:var(--mono);font-size:10px;opacity:.62;margin-top:3px;letter-spacing:.3px}
+  .method-switch button.active{background:var(--ink);color:var(--panel)}
+  .method-switch button.active .sub{opacity:.82}
+  .grid{display:grid;grid-template-columns:minmax(0,1fr) 396px;gap:22px;align-items:start}
+  @media (max-width:1100px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line2);border-radius:4px;box-shadow:0 1px 0 rgba(20,30,25,.04),0 10px 26px -20px rgba(20,30,25,.55);margin-bottom:18px;overflow:hidden}
+  .card-head{display:flex;align-items:center;gap:10px;padding:11px 16px;border-bottom:1px solid var(--line);background:linear-gradient(#fdfbf5,#f2eee3)}
+  .card-head .num{font-family:var(--mono);font-size:11px;color:var(--panel);background:var(--teal);width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex:0 0 auto}
+  .card-head h2{margin:0;font-size:14.5px;font-weight:650;letter-spacing:.3px;flex:1}
+  .card-head .hint{font-family:var(--mono);font-size:10.5px;color:var(--ink2);letter-spacing:.4px}
+  .card-body{padding:16px}
+  .field-row{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .field label{font-size:11.5px;color:var(--ink2);letter-spacing:.4px;font-weight:600}
+  input[type=text],input[type=number],select{font-family:var(--mono);font-size:13.5px;color:var(--ink);background:#fff;border:1px solid var(--line2);border-radius:3px;padding:7px 9px;outline:none;transition:.15s;width:100%}
+  input:focus,select:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(17,107,91,.12)}
+  select{font-family:var(--sans)}
+  .unit-inline{font-family:var(--mono);font-size:11.5px;color:var(--ink2);align-self:center;padding-left:2px}
+  .table-scroll{overflow-x:auto;margin:0 -16px;padding:0 16px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  #saltTable{min-width:960px}
+  #auxTable{min-width:790px}
+  thead th{font-size:11px;font-weight:650;color:var(--ink2);letter-spacing:.5px;text-align:left;padding:6px 6px 8px;border-bottom:1.5px solid var(--line2);white-space:nowrap}
+  thead th.r{text-align:right}
+  tbody td{padding:5px 6px;border-bottom:1px dashed var(--line);vertical-align:middle}
+  tbody tr:last-child td{border-bottom:0}
+  tbody tr.invalid{background:#fbf1eb}
+  td input{padding:5px 6px;font-size:12.5px}
+  td select{padding:5px 6px;font-size:12px}
+  td.c-num input{text-align:right}
+  td.c-num input:disabled{background:#f4f1e9;color:#b3aa96}
+  .cell-out{font-family:var(--mono);font-size:12.5px;font-weight:650;text-align:right;white-space:nowrap}
+  .cell-out small{display:block;font-weight:400;color:var(--ink2);font-size:10.5px}
+  .cell-out.err{color:var(--rust);font-size:11px;font-weight:500;text-align:left}
+  .del{border:0;background:transparent;color:var(--ink2);cursor:pointer;font-size:15px;line-height:1;padding:3px 5px;border-radius:3px}
+  .del:hover{background:#f2e7e0;color:var(--rust)}
+  .btn{appearance:none;font-family:var(--sans);font-size:12.5px;font-weight:600;border:1px solid var(--line2);background:#fff;color:var(--ink);padding:7px 12px;border-radius:3px;cursor:pointer;transition:.15s;letter-spacing:.3px}
+  .btn:hover{border-color:var(--teal);color:var(--teal)}
+  .btn.primary{background:var(--teal);border-color:var(--teal);color:var(--panel)}
+  .btn.primary:hover{background:#0d5749;border-color:#0d5749;color:var(--panel)}
+  .btn.ghost{background:transparent}
+  .btn-row{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px;align-items:center}
+  .preset-row{display:flex;flex-wrap:wrap;gap:7px;margin-top:12px;align-items:center}
+  .preset-row .plab{font-family:var(--mono);font-size:10.5px;color:var(--ink2);letter-spacing:.4px;margin-right:2px}
+  .element-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(45px,1fr));gap:5px;margin-top:12px}
+  .element-picker button{border:1px solid var(--line2);background:#fff;color:var(--ink);border-radius:3px;padding:4px 2px;font-family:var(--mono);font-size:11px;cursor:pointer}
+  .element-picker button:hover{border-color:var(--teal);color:var(--teal);background:var(--tealSoft)}
+  .element-picker .picker-label{grid-column:1/-1;font-size:10.5px;color:var(--ink2);letter-spacing:.4px;margin-top:5px}
+  .chip{font-family:var(--mono);font-size:11.5px;border:1px dashed var(--line2);background:#fff;padding:4px 9px;border-radius:20px;cursor:pointer;color:var(--ink2);transition:.15s}
+  .chip:hover{border-style:solid;border-color:var(--teal);color:var(--teal)}
+  .panel{position:sticky;top:18px;background:var(--panel);border:1.5px solid var(--ink);border-radius:4px;box-shadow:6px 6px 0 rgba(22,35,31,.07)}
+  .panel-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1.5px solid var(--ink)}
+  .panel-head h2{margin:0;font-size:14px;letter-spacing:1.2px}
+  .badge{font-family:var(--mono);font-size:10px;letter-spacing:1px;color:var(--panel);background:var(--rust);padding:2px 7px;border-radius:2px}
+  .panel-body{padding:14px 16px 16px;max-height:calc(100vh - 150px);overflow:auto}
+  .summary{border:1px solid var(--line);background:#f9f6ee;border-radius:3px;padding:10px 12px;margin-bottom:14px}
+  .summary dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:12px}
+  .summary dt{color:var(--ink2)}
+  .summary dd{margin:0;font-family:var(--mono);font-weight:650;text-align:right}
+  .summary dd.big{font-size:15px;color:var(--teal)}
+  .sec-title{font-family:var(--mono);font-size:10.5px;letter-spacing:1.2px;color:var(--ink2);text-transform:uppercase;border-bottom:1px solid var(--line);padding-bottom:4px;margin:16px 0 8px}
+  .res-table{width:100%;border-collapse:collapse;font-size:12px}
+  .res-table th{font-size:10.5px;color:var(--ink2);font-weight:600;text-align:right;padding:4px 0}
+  .res-table th:first-child{text-align:left}
+  .res-table td{padding:5px 0;border-bottom:1px dotted var(--line);vertical-align:top}
+  .res-table td.name{font-size:12px;line-height:1.35}
+  .res-table td.name span{display:block;font-family:var(--mono);font-size:10px;color:var(--ink2)}
+  .res-table td.n{font-family:var(--mono);text-align:right;white-space:nowrap;padding-left:8px}
+  .res-table td.m{font-family:var(--mono);text-align:right;white-space:nowrap;font-weight:650;padding-left:8px}
+  .res-table td.m small{display:block;font-weight:400;color:var(--ink2);font-size:10px}
+  .note{font-size:11.5px;color:var(--ink2);line-height:1.6;margin-top:12px;border-left:2px solid var(--line2);padding-left:10px}
+  .note.warn{border-left-color:var(--rust);background:#fdf3ec;color:#8a4020;padding:8px 10px;border-radius:0 3px 3px 0}
+  .protocol{margin-top:14px;padding:12px 14px;background:#f4f2e9;border:1px dashed var(--line2);border-radius:3px;font-size:12px;line-height:1.75;color:var(--ink2)}
+  .protocol strong{color:var(--ink);display:block;margin-bottom:4px;font-size:12.5px}
+  footer{margin-top:26px;padding-top:14px;border-top:1px solid var(--line2);font-family:var(--mono);font-size:11px;color:var(--ink2);display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .hidden{display:none!important}
+  .settings-button{margin-left:auto}
+  .settings-dialog{width:min(440px,calc(100vw - 32px));border:1.5px solid var(--ink);border-radius:5px;padding:0;background:var(--panel);color:var(--ink);box-shadow:0 18px 60px rgba(0,0,0,.25)}
+  .settings-dialog::backdrop{background:rgba(22,35,31,.42)}
+  .settings-dialog header{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:1px solid var(--line)}
+  .settings-dialog h2{margin:0;font-size:16px}
+  .settings-dialog .settings-content{padding:16px}
+  .settings-dialog .field{margin-bottom:14px}
+  .settings-dialog input{font-family:var(--sans)}
+  .settings-dialog .settings-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+  #formulaAutoHint{min-height:1.5em;margin-top:8px;color:var(--teal);font-size:11.5px}
+  @media print{
+    body{zoom:1;background:#fff}
+    .wrap{max-width:none;padding:0}
+    .method-switch,.btn-row,.preset-row,.del,.settings-button{display:none!important}
+    .grid{grid-template-columns:1fr}
+    .panel{position:static;box-shadow:none;page-break-inside:avoid}
+    .card{box-shadow:none;page-break-inside:avoid}
+    .panel-body{max-height:none;overflow:visible}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="title-box">
+      <span class="lab">hydrated nitrate · batch sheet</span>
+      <h1>氧化物材料合成计算器</h1>
+      <p>按晶体结构和晶位占位设计配方，计算前驱体及螯合剂 / 燃料称取量</p>
+    </div>
+    <div class="method-switch" id="methodSwitch">
+      <button data-method="edta" class="active">EDTA 溶胶-凝胶法<span class="sub">M : EDTA : CA = 1 : 1 : 2</span></button>
+      <button data-method="combustion">硝酸盐燃烧法<span class="sub">M : Gly : CA = 1 : 2 : 1</span></button>
+    </div>
+    <button class="btn ghost settings-button" id="settingsBtn" type="button">字体与字号</button>
+  </header>
+
+  <div class="grid">
+    <main>
+
+      <!-- ===== 1 材料结构 ===== -->
+      <section class="card">
+        <div class="card-head"><span class="num">1</span><h2>材料结构与组成设计</h2><span class="hint">晶位占位分别归一化</span></div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field" style="flex:0 0 220px">
+              <label>晶体结构</label>
+              <select id="structure">
+                <option value="perovskite">钙钛矿 ABO₃（A:B = 1:1）</option>
+                <option value="spinel">尖晶石 AB₂O₄（A:B = 1:2）</option>
+                <option value="rp">RP 相钙钛矿 Aₙ₊₁BₙO₃ₙ₊₁</option>
+              </select>
+            </div>
+            <div class="field hidden" id="rpNField" style="flex:0 0 120px">
+              <label>RP 层数 n</label>
+              <input type="number" id="rpN" step="1" min="1" value="1">
+            </div>
+            <div class="unit-inline" id="structureHint">A 位总占位量 1；B 位总占位量 1。各位点输入相对占位比例，计算时分别归一化。</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 2 合成规模 ===== -->
+      <section class="card">
+        <div class="card-head"><span class="num">2</span><h2>合成规模</h2><span class="hint" id="basisHint">按总金属计量</span></div>
+        <div class="card-body">
+          <div class="field-row">
+            <div class="field" style="flex:1 1 210px">
+              <label>计量基准</label>
+              <select id="basis">
+                <option value="metal">总金属物质的量 ΣM</option>
+                <option value="productMol">目标产物物质的量</option>
+                <option value="productMass">目标产物质量</option>
+              </select>
+            </div>
+            <div class="field" style="flex:0 1 110px">
+              <label>合成量</label>
+              <input type="number" id="amount" step="any" min="0" value="2">
+            </div>
+            <div class="field" style="flex:0 0 84px">
+              <label>单位</label>
+              <select id="amountUnit"><option value="mmol">mmol</option><option value="mol">mol</option></select>
+            </div>
+            <div class="field" id="prodFormulaField" style="flex:1 1 170px">
+              <label>目标产物化学式（用于组成校验）</label>
+              <input type="text" id="prodFormula" value="La0.6Sr0.4MnO3" spellcheck="false">
+            </div>
+            <div class="field" id="prodMField" style="flex:0 1 150px">
+              <label>产物摩尔质量 g/mol</label>
+              <input type="number" id="prodM" step="any" min="0" placeholder="自动">
+            </div>
+          </div>
+          <div id="formulaAutoHint" aria-live="polite"></div>
+          <div class="unit-inline" style="margin-top:10px;display:block">化学式必须与晶位组成及结构氧含量一致；摩尔质量由化学式与 IUPAC 原子量实时计算。</div>
+        </div>
+      </section>
+
+      <!-- ===== 3 元素与硝酸盐 ===== -->
+      <section class="card">
+        <div class="card-head"><span class="num">3</span><h2>元素与硝酸盐</h2><span class="hint">化学式可改水合物数</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table id="saltTable">
+              <thead>
+                <tr>
+                  <th style="width:62px">元素</th>
+                  <th style="width:62px">晶位</th>
+                  <th class="r" style="width:76px">占位比例</th>
+                  <th class="r" style="width:76px">氧化态</th>
+                  <th style="width:204px">金属前驱体化学式</th>
+                  <th style="width:84px">形态</th>
+                  <th class="r" style="width:84px">纯度 / 浓度</th>
+                  <th class="r" style="width:72px">密度</th>
+                  <th class="r" style="width:118px">需称取</th>
+                  <th style="width:28px"></th>
+                </tr>
+              </thead>
+              <tbody id="saltBody"></tbody>
+            </table>
+          </div>
+          <div class="btn-row">
+            <select id="addElement" style="width:auto;min-width:130px"></select>
+            <select id="addSite" style="width:auto"><option value="A">添加到 A 位</option><option value="B">添加到 B 位</option></select>
+            <button class="btn" id="addRow">+ 添加元素</button>
+            <button class="btn" id="loadFromFormula">从产物化学式载入配比</button>
+            <button class="btn ghost" id="toggleSolvent">溶剂体积换算</button>
+            <button class="btn ghost" id="resetBtn">重置</button>
+          </div>
+          <div class="element-picker" id="elementPicker" aria-label="元素选择"></div>
+          <div class="preset-row">
+            <span class="plab">预设</span>
+            <button class="chip" data-preset="LaMnO3">LaMnO₃</button>
+            <button class="chip" data-preset="LSM">La₀.₆Sr₀.₄MnO₃</button>
+            <button class="chip" data-preset="LaCoO3">LaCoO₃</button>
+            <button class="chip" data-preset="LSCF">La₀.₆Sr₀.₄Co₀.₂Fe₀.₈O₃</button>
+            <button class="chip" data-preset="La2NiO4">La₂NiO₄（RP）</button>
+            <button class="chip" data-preset="clear">清空</button>
+          </div>
+          <div class="field-row hidden" id="solventRow" style="margin-top:16px">
+            <div class="field" style="flex:0 0 190px">
+              <label>前驱液定容体积 mL</label>
+              <input type="number" id="solvent" step="any" min="0" value="0" placeholder="0 = 不计算">
+            </div>
+            <div class="field" style="flex:1 1 180px;justify-content:flex-end">
+              <span class="unit-inline">换算各金属离子浓度 mol/L</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== 4 螯合剂 / 燃料 ===== -->
+      <section class="card">
+        <div class="card-head"><span class="num">4</span><h2 id="auxTitle">螯合剂</h2><span class="hint" id="auxHint">每摩尔总金属的用户设定配比</span></div>
+        <div class="card-body">
+          <div class="table-scroll">
+            <table id="auxTable">
+              <thead>
+                <tr>
+                  <th style="width:190px">名称</th>
+                  <th style="width:150px">试剂形态</th>
+                  <th style="width:190px">化学式</th>
+                  <th class="r" style="width:92px">每摩尔金属</th>
+                  <th class="r" style="width:80px">纯度 %</th>
+                  <th class="r" style="width:88px">摩尔质量</th>
+                  <th class="r" style="width:120px">需称取</th>
+                </tr>
+              </thead>
+              <tbody id="auxBody"></tbody>
+            </table>
+          </div>
+          <div class="field-row" style="margin-top:12px">
+            <div class="field" style="flex:0 0 180px">
+              <label>螯合剂 / 燃料额外过量 %</label>
+              <input type="number" id="auxExcess" step="any" min="0" value="0">
+            </div>
+            <span class="unit-inline">默认 0%；按比例增加称取量</span>
+          </div>
+          <div class="protocol" id="protocol"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ===== 配方单 ===== -->
+    <aside>
+      <div class="panel">
+        <div class="panel-head"><h2>配方单</h2><span class="badge" id="methodBadge">EDTA 法</span></div>
+        <div class="panel-body">
+          <div class="summary">
+            <dl>
+              <dt>总金属 ΣM</dt><dd class="big" id="sTotal">—</dd>
+              <dt>结构计量 A+B</dt><dd id="sSum">—</dd>
+              <dt>产物物质的量</dt><dd id="sProd">—</dd>
+              <dt>产物摩尔质量</dt><dd id="sProdM">—</dd>
+              <dt>理论产物质量</dt><dd id="sProdMass">—</dd>
+              <dt>电荷平衡</dt><dd id="sCharge">—</dd>
+            </dl>
+          </div>
+          <div class="sec-title">硝酸盐</div>
+          <table class="res-table">
+            <thead><tr><th>组分 / 化学式</th><th style="text-align:right">mmol</th><th style="text-align:right">称取</th></tr></thead>
+            <tbody id="resSalts"></tbody>
+          </table>
+          <div class="sec-title" id="auxSecTitle">螯合剂</div>
+          <table class="res-table">
+            <thead><tr><th>组分</th><th style="text-align:right">mmol</th><th style="text-align:right">称取</th></tr></thead>
+            <tbody id="resAux"></tbody>
+          </table>
+          <div id="concBox" class="hidden">
+            <div class="sec-title">离子浓度</div>
+            <table class="res-table"><tbody id="resConc"></tbody></table>
+          </div>
+          <div id="warnBox"></div>
+          <div class="btn-row">
+            <button class="btn primary" id="copyBtn">复制配方单</button>
+            <button class="btn" id="csvBtn">导出 CSV</button>
+            <button class="btn" id="printBtn">打印</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <span>摩尔质量 = Σ(原子量 × 原子个数)，IUPAC 2021 标准原子量；水合物按化学式自动折算</span>
+    <span id="footStamp"></span>
+  </footer>
+</div>
+
+<dialog class="settings-dialog" id="settingsDialog" aria-labelledby="settingsTitle">
+  <form method="dialog" id="settingsForm">
+    <header>
+      <h2 id="settingsTitle">字体与字号设置</h2>
+      <button class="del" type="button" id="settingsClose" aria-label="关闭">×</button>
+    </header>
+    <div class="settings-content">
+      <div class="field">
+        <label for="fontFamily">字体名称（可输入系统已安装字体）</label>
+        <input type="text" id="fontFamily" list="fontOptions" placeholder="例如：Microsoft YaHei">
+        <datalist id="fontOptions">
+          <option value="Microsoft YaHei"></option>
+          <option value="SimSun"></option>
+          <option value="SimHei"></option>
+          <option value="Arial"></option>
+          <option value="Times New Roman"></option>
+          <option value="等线"></option>
+        </datalist>
+      </div>
+      <div class="field">
+        <label for="fontSize">字号（10–24 px）</label>
+        <input type="number" id="fontSize" min="10" max="24" step="1">
+      </div>
+      <div class="settings-actions">
+        <button class="btn" type="button" id="settingsCancel">取消</button>
+        <button class="btn primary" type="submit" id="settingsSave">保存设置</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<script>
+/* ==================================================================
+   化学核心：原子量、化学式解析、配比计算
+   ================================================================== */
+const AW = {
+  H:1.008, He:4.0026, Li:6.94, Be:9.0122, B:10.81, C:12.011, N:14.007, O:15.999, F:18.998, Ne:20.180,
+  Na:22.990, Mg:24.305, Al:26.982, Si:28.085, P:30.974, S:32.06, Cl:35.45, Ar:39.948, K:39.098, Ca:40.078,
+  Sc:44.956, Ti:47.867, V:50.942, Cr:51.996, Mn:54.938, Fe:55.845, Co:58.933, Ni:58.693, Cu:63.546, Zn:65.38,
+  Ga:69.723, Ge:72.630, As:74.922, Se:78.971, Br:79.904, Kr:83.798, Rb:85.468, Sr:87.62, Y:88.906, Zr:91.224,
+  Nb:92.906, Mo:95.95, Ru:101.07, Rh:102.906, Pd:106.42, Ag:107.868, Cd:112.414, In:114.818, Sn:118.710,
+  Sb:121.760, Te:127.60, I:126.904, Xe:131.293, Cs:132.905, Ba:137.327, La:138.905, Ce:140.116, Pr:140.908,
+  Nd:144.242, Sm:150.36, Eu:151.964, Gd:157.25, Tb:158.925, Dy:162.500, Ho:164.930, Er:167.259, Tm:168.934,
+  Yb:173.045, Lu:174.967, Hf:178.49, Ta:180.948, W:183.84, Re:186.207, Os:190.23, Ir:192.217, Pt:195.084,
+  Au:196.967, Hg:200.592, Tl:204.38, Pb:207.2, Bi:208.980, Th:232.038, U:238.029
+};
+
+const SALT_DEFAULTS = {
+  Li:'LiNO3', Na:'NaNO3', K:'KNO3', Mg:'Mg(NO3)2·6H2O', Ca:'Ca(NO3)2·4H2O', Sr:'Sr(NO3)2',
+  Ba:'Ba(NO3)2', Al:'Al(NO3)3·9H2O', Cr:'Cr(NO3)3·9H2O', Mn:'Mn(NO3)2·4H2O', Fe:'Fe(NO3)3·9H2O',
+  Co:'Co(NO3)2·6H2O', Ni:'Ni(NO3)2·6H2O', Cu:'Cu(NO3)2·3H2O', Zn:'Zn(NO3)2·6H2O', Y:'Y(NO3)3·6H2O',
+  Zr:'ZrO(NO3)2·2H2O', Ag:'AgNO3', Cd:'Cd(NO3)2·4H2O', La:'La(NO3)3·6H2O', Ce:'Ce(NO3)3·6H2O',
+  Pr:'Pr(NO3)3·6H2O', Nd:'Nd(NO3)3·6H2O', Sm:'Sm(NO3)3·6H2O', Eu:'Eu(NO3)3·6H2O', Gd:'Gd(NO3)3·6H2O',
+  Tb:'Tb(NO3)3·6H2O', Dy:'Dy(NO3)3·6H2O', Ho:'Ho(NO3)3·6H2O', Er:'Er(NO3)3·6H2O', Tm:'Tm(NO3)3·6H2O',
+  Yb:'Yb(NO3)3·6H2O', Lu:'Lu(NO3)3·6H2O', Bi:'Bi(NO3)3·5H2O', Pb:'Pb(NO3)2'
+};
+
+/* 解析化学式：元素、括号、小数下标、水合物（· / *），返回摩尔质量与原子计数 */
+function parseFormula(input){
+  const subscriptMap = { '₀':'0','₁':'1','₂':'2','₃':'3','₄':'4','₅':'5','₆':'6','₇':'7','₈':'8','₉':'9','₊':'+','₋':'-' };
+  const raw = String(input || '').replace(/[₀-₉₊₋]/g, ch => subscriptMap[ch]).replace(/\s+/g, '').replace(/[·•]/g, '*').replace(/[+−-](?:δ|Δ)$/i, '');
+  if(!raw) return { ok:false, error:'化学式为空' };
+  const counts = {};
+  const parts = raw.split('*');
+  if(parts.some(part => !part)) return { ok:false, error:'水合物分隔符位置错误' };
+  const numberPattern = /^(?:\d+(?:\.\d+)?|\.\d+)/;
+  for(let partIndex = 0; partIndex < parts.length; partIndex++){
+    let part = parts[partIndex];
+    let coefficient = 1;
+    const leading = numberPattern.exec(part);
+    if(leading){
+      if(partIndex === 0 && !/^[A-Z(]/.test(part)) return { ok:false, error:'化学式不能以计量系数开头' };
+      if(partIndex > 0){
+        coefficient = Number(leading[0]);
+        if(!(coefficient > 0)) return { ok:false, error:'水合物系数必须大于 0' };
+        part = part.slice(leading[0].length);
+      }
+    }
+    let i = 0;
+    function readNumber(){
+      const match = numberPattern.exec(part.slice(i));
+      if(!match) return 1;
+      const value = Number(match[0]);
+      i += match[0].length;
+      if(!(value > 0)) throw new Error('原子下标必须大于 0');
+      return value;
+    }
+    function parseGroup(nested){
+      const groupCounts = {};
+      let tokens = 0;
+      while(i < part.length && part[i] !== ')'){
+        if(part[i] === '('){
+          i++;
+          const inner = parseGroup(true);
+          if(part[i] !== ')') throw new Error('括号不匹配');
+          i++;
+          if(!Object.keys(inner).length) throw new Error('括号内不能为空');
+          const multiplier = readNumber();
+          for(const element in inner) groupCounts[element] = (groupCounts[element] || 0) + inner[element] * multiplier;
+          tokens++;
+        } else if(/[A-Z]/.test(part[i])){
+          let element = part[i++];
+          while(i < part.length && /[a-z]/.test(part[i])) element += part[i++];
+          if(!(element in AW)) throw new Error('未知元素 ' + element);
+          groupCounts[element] = (groupCounts[element] || 0) + readNumber();
+          tokens++;
+        } else {
+          throw new Error('无法识别的字符“' + part[i] + '”');
+        }
+      }
+      if(nested && !tokens) throw new Error('括号内不能为空');
+      return groupCounts;
+    }
+    try{
+      const segment = parseGroup(false);
+      if(i !== part.length) throw new Error('括号不匹配');
+      if(!Object.keys(segment).length) throw new Error('无法解析该化学式');
+      for(const element in segment) counts[element] = (counts[element] || 0) + segment[element] * coefficient;
+    }catch(error){
+      return { ok:false, error:error.message || '化学式格式错误' };
+    }
+  }
+  let M = 0;
+  for(const element in counts) M += counts[element] * AW[element];
+  return { ok:true, M, counts };
+}
+
+/* ==================================================================
+   状态
+   ================================================================== */
+function newRow(el, salt, ratio){
+  return { el, salt: salt || SALT_DEFAULTS[el] || '', site:defaultSite(el), oxidation:defaultOxidation(el), ratio, form:'solid', purity:99, conc:50, density:1.54 };
+}
+function defaultSite(el){
+  return ['Li','Na','K','Mg','Ca','Sr','Ba','La','Ce','Pr','Nd','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Y'].indexOf(el) >= 0 ? 'A' : 'B';
+}
+function defaultOxidation(el){
+  if(['Li','Na','K','Ag'].indexOf(el) >= 0) return 1;
+  if(['Mg','Ca','Sr','Ba','Zn','Cd'].indexOf(el) >= 0) return 2;
+  if(['Al','Y','La','Ce','Pr','Nd','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu','Bi'].indexOf(el) >= 0) return 3;
+  return 3;
+}
+const STRUCTURES = {
+  perovskite:{ A:1, B:1, oxygen:3, cations:2, label:'钙钛矿 ABO₃' },
+  spinel:{ A:1, B:2, oxygen:4, cations:3, label:'尖晶石 AB₂O₄' }
+};
+function recognizeStructure(counts){
+  const cations = Object.keys(counts).filter(element => element !== 'O');
+  const aTotal = cations.reduce((sum, element) => sum + (defaultSite(element) === 'A' ? counts[element] : 0), 0);
+  const bTotal = cations.reduce((sum, element) => sum + (defaultSite(element) === 'B' ? counts[element] : 0), 0);
+  const oxygen = counts.O || 0;
+  const close = (a, b) => Math.abs(a - b) < 1e-6;
+  if(!(aTotal > 0) || !(bTotal > 0)) return null;
+  if(close(aTotal, 1) && close(bTotal, 1) && close(oxygen, 3)) return { structure:'perovskite', n:1, label:'钙钛矿 ABO₃' };
+  if(close(aTotal, 1) && close(bTotal, 2) && close(oxygen, 4)) return { structure:'spinel', n:1, label:'尖晶石 AB₂O₄' };
+  const n = Math.round(bTotal);
+  if(n >= 1 && Number.isSafeInteger(n) && close(aTotal, n + 1) && close(oxygen, 3 * n + 1)){
+    return { structure:'rp', n, label:'RP 相钙钛矿 Aₙ₊₁BₙO₃ₙ₊₁（n=' + n + '）' };
+  }
+  return null;
+}
+
+function adaptFromFormula(parsed, match){
+  st.structure = match.structure;
+  st.rpN = match.n;
+  const elements = Object.keys(parsed.counts).filter(element => element !== 'O');
+  st.rows = elements.map(element => newRow(element, SALT_DEFAULTS[element] || '', parsed.counts[element]));
+  const structure = structureInfo();
+  const aCharge = st.rows.reduce((sum, row) => sum + (row.site === 'A' ? Number(row.ratio) * Number(row.oxidation) : 0), 0);
+  const bRows = st.rows.filter(row => row.site === 'B');
+  if(bRows.length === 1){
+    const bCount = Number(bRows[0].ratio);
+    const oxidation = (structure.oxygen * 2 - aCharge) / bCount;
+    if(isFinite(oxidation) && oxidation > 0) bRows[0].oxidation = Number(oxidation.toFixed(4));
+  }
+  $('structure').value = st.structure;
+  $('rpN').value = st.rpN;
+  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  updateStructureHint();
+  renderSaltTable();
+  $('formulaAutoHint').textContent = '已识别为' + match.label + '；结构和晶位配比已自动适配。';
+}
+function structureInfo(){
+  if(st.structure === 'rp'){
+    const n = Number(st.rpN);
+    if(!Number.isSafeInteger(n) || n < 1) return null;
+    const subscript = value => String(value).replace(/[0-9]/g, digit => '₀₁₂₃₄₅₆₇₈₉'[Number(digit)]);
+    const formula = 'A' + subscript(n + 1) + 'B' + (n === 1 ? '' : subscript(n)) + 'O' + subscript(3 * n + 1);
+    return { A:n + 1, B:n, oxygen:3 * n + 1, cations:2 * n + 1, label:'RP 相钙钛矿 ' + formula + '（n=' + n + '）' };
+  }
+  return STRUCTURES[st.structure] || STRUCTURES.perovskite;
+}
+function updateStructureHint(){
+  const structure = structureInfo();
+  if(!structure){
+    $('structureHint').textContent = 'RP 层数 n 必须为大于或等于 1 的整数。';
+    return;
+  }
+  $('structureHint').textContent = 'A 位总占位量 ' + structure.A + '；B 位总占位量 ' + structure.B + '。各位点输入相对占位比例，计算时分别归一化。';
+}
+const AUX_FORMS = {
+  edta:[
+    {label:'游离酸', formula:'C10H16N2O8'},
+    {label:'二钠盐（二水）', formula:'C10H14N2Na2O8·2H2O'}
+  ],
+  citrate:[
+    {label:'一水合物', formula:'C6H8O7·H2O'},
+    {label:'无水物', formula:'C6H8O7'}
+  ]
+};
+function auxFor(method){
+  if(method === 'edta'){
+    return [
+      { name:'EDTA（乙二胺四乙酸）', kind:'edta', formIndex:0, formula:'C10H16N2O8', per:1, purity:99 },
+      { name:'柠檬酸', kind:'citrate', formIndex:0, formula:'C6H8O7·H2O', per:2, purity:99 }
+    ];
+  }
+  return [
+    { name:'甘氨酸（无水）', kind:'fixed', formula:'C2H5NO2', per:2, purity:99 },
+    { name:'柠檬酸', kind:'citrate', formIndex:0, formula:'C6H8O7·H2O', per:1, purity:99 }
+  ];
+}
+
+const PRESETS = {
+  LaMnO3: [['La',1],['Mn',1]],
+  LSM: [['La',0.6],['Sr',0.4],['Mn',1]],
+  LaCoO3: [['La',1],['Co',1]],
+  LSCF: [['La',0.6],['Sr',0.4],['Co',0.2],['Fe',0.8]],
+  La2NiO4: [['La',2],['Ni',1]],
+  clear: []
+};
+
+let st = {
+  method:'edta', structure:'perovskite', rpN:1, auxExcess:0, basis:'metal', amount:2, amountUnit:'mmol',
+  settings:{ fontFamily:'', fontSize:14 },
+  prodFormula:'La0.6Sr0.4MnO3', prodM:null, solvent:0,
+  rows:[newRow('La','La(NO3)3·6H2O',0.6), newRow('Sr','Sr(NO3)2',0.4), Object.assign(newRow('Mn','Mn(NO3)2·4H2O',1), {oxidation:3.4})],
+  aux: auxFor('edta')
+};
+
+/* ==================================================================
+   格式化
+   ================================================================== */
+function fmtMass(g){
+  if(!isFinite(g) || g === null) return '—';
+  const mg = g * 1000;
+  if(Math.abs(g) >= 1) return g.toFixed(3) + ' g';
+  if(Math.abs(mg) >= 1) return mg.toFixed(1) + ' mg';
+  if(Math.abs(mg) >= 0.01) return (mg * 1000).toFixed(0) + ' µg';
+  return '≈ 0';
+}
+function fmtMmol(mol){
+  if(!isFinite(mol) || mol === null) return '—';
+  const mmol = mol * 1000;
+  if(Math.abs(mmol) >= 1000) return (mmol / 1000).toFixed(3) + ' mol';
+  if(Math.abs(mmol) >= 0.001) return mmol.toFixed(3) + ' mmol';
+  return (mmol * 1000).toFixed(1) + ' µmol';
+}
+function fmtVol(ml){
+  if(!isFinite(ml) || ml === null) return '—';
+  if(ml >= 1) return ml.toFixed(2) + ' mL';
+  return (ml * 1000).toFixed(0) + ' µL';
+}
+function num(x, d){
+  if(!isFinite(x)) return '—';
+  return x.toFixed(d === undefined ? 2 : d);
+}
+
+/* ==================================================================
+   计算
+   ================================================================== */
+function compute(){
+  const structure = structureInfo();
+  const out = { ok:false, S:structure ? structure.cations : 0, N:0, rows:[], aux:[], conc:[], warnings:[], productM:null, coefficients:{} };
+  if(!structure){ out.warnings.push('RP 层数 n 必须为大于或等于 1 的整数。'); return out; }
+  const amountValue = Number(st.amount);
+  const excessValue = Number(st.auxExcess);
+  if(!isFinite(amountValue) || amountValue < 0){ out.warnings.push('合成量必须是大于或等于 0 的有效数值。'); return out; }
+  if(!isFinite(excessValue) || excessValue < 0){ out.warnings.push('螯合剂 / 燃料额外过量必须是大于或等于 0 的有效数值。'); return out; }
+  if(!st.rows.length){ out.warnings.push('还没有元素，请先添加配比。'); return out; }
+  const seen = new Set();
+  for(const row of st.rows){
+    if(!row.el || !(row.el in AW)){ out.warnings.push('存在空白或无法识别的元素符号。'); continue; }
+    if(seen.has(row.el)) out.warnings.push(row.el + ' 被重复添加；同一元素不能分配到多个表格行或不同晶位。');
+    seen.add(row.el);
+  }
+  if(out.warnings.length) return out;
+
+  const siteSums = { A:0, B:0 };
+  st.rows.forEach(row => {
+    const ratio = Number(row.ratio);
+    if((row.site !== 'A' && row.site !== 'B') || !isFinite(ratio) || ratio < 0){
+      out.warnings.push(row.el + ' 的晶位或占位比例无效。');
+    } else {
+      siteSums[row.site] += ratio;
+    }
+  });
+  if(out.warnings.length) return out;
+  ['A','B'].forEach(site => {
+    if(!(siteSums[site] > 0)) out.warnings.push(site + ' 位没有有效元素占位。');
+  });
+  if(out.warnings.length) return out;
+
+  st.rows.forEach(row => {
+    const capacity = structure[row.site];
+    out.coefficients[row.el] = capacity * Number(row.ratio) / siteSums[row.site];
+  });
+  out.coefficients.O = structure.oxygen;
+
+  let Mp = null;
+  const pf = parseFormula(st.prodFormula);
+  if(!pf.ok){ out.warnings.push('目标产物化学式无效：' + pf.error); return out; }
+  const formulaElements = new Set(Object.keys(pf.counts).concat(Object.keys(out.coefficients)));
+  for(const element of formulaElements){
+    const expected = out.coefficients[element] || 0;
+    const actual = pf.counts[element] || 0;
+    if(Math.abs(expected - actual) > 1e-6){
+      out.warnings.push('目标产物化学式与晶位组成不一致：' + element + ' 应为 ' + num(expected, 4) + '，输入为 ' + num(actual, 4) + '。');
+    }
+  }
+  if(out.warnings.length) return out;
+  Mp = pf.M;
+  if(st.prodM && st.prodM > 0) Mp = Number(st.prodM);
+  out.productM = Mp;
+
+  const amt = amountValue;
+  let N = 0;
+  if(st.basis === 'metal'){
+    N = st.amountUnit === 'mol' ? amt : amt / 1000;
+  } else if(st.basis === 'productMol'){
+    const np = st.amountUnit === 'mol' ? amt : amt / 1000;
+    N = np * structure.cations;
+  } else {
+    if(!Mp){ out.warnings.push('按产物质量计量需要产物化学式或摩尔质量。'); return out; }
+    const np = st.amountUnit === 'mg' ? (amt / 1000) / Mp : amt / Mp;
+    N = np * structure.cations;
+  }
+  out.N = N;
+
+  // 硝酸盐
+  st.rows.forEach(r => {
+    const p = parseFormula(r.salt);
+    const ratio = Number(r.ratio) || 0;
+    const coefficient = out.coefficients[r.el];
+    let error = p.ok ? '' : p.error;
+    if(p.ok && !(Math.abs((p.counts[r.el] || 0) - 1) < 1e-8)){
+      error = '前驱体必须恰好含 1 个 ' + r.el + ' 原子；当前为 ' + num(p.counts[r.el] || 0, 3);
+    }
+    const assay = r.form === 'solution' ? Number(r.conc) : Number(r.purity);
+    if(!error && (!isFinite(assay) || assay <= 0 || assay > 100)){
+      error = (r.form === 'solution' ? '溶液质量分数' : '试剂纯度') + '必须大于 0 且不超过 100%。';
+    }
+    if(!error && r.form === 'solution' && (!(Number(r.density) > 0) || !isFinite(Number(r.density)))){
+      error = '溶液密度必须大于 0。';
+    }
+    const item = { el:r.el, site:r.site, salt:r.salt, ratio, coefficient, frac:coefficient / structure.cations, ok:!error, M:p.ok ? p.M : null, err:error };
+    if(item.ok){
+      item.n = N * coefficient / structure.cations;
+      item.m = item.n * p.M;
+      if(r.form === 'solution'){
+        const c = (Number(r.conc) || 0) / 100;
+        item.msol = c > 0 ? item.m / c : NaN;
+        const rho = Number(r.density) || 0;
+        item.vol = rho > 0 ? item.msol / rho : NaN;
+        item.actualLabel = '溶液';
+      } else {
+        const pur = (Number(r.purity) || 0) / 100;
+        item.mActual = pur > 0 ? item.m / pur : NaN;
+        item.actualLabel = '实称';
+      }
+    }
+    out.rows.push(item);
+  });
+
+  // 螯合剂 / 燃料
+  st.aux.forEach(a => {
+    const p = parseFormula(a.formula);
+    const per = Number(a.per);
+    const purity = Number(a.purity);
+    const validPurity = isFinite(purity) && purity > 0 && purity <= 100;
+    const validRatio = isFinite(per) && per >= 0;
+    const error = !p.ok ? p.error : (!validPurity ? '试剂纯度必须大于 0 且不超过 100%。' : (!validRatio ? '每摩尔金属配比必须是大于或等于 0 的有效数值。' : ''));
+    const item = { name:a.name, formula:a.formula, per, ok:!error, M:p.ok ? p.M : null, err:error };
+    if(p.ok){
+      item.n = (isFinite(per) ? per : 0) * N * (1 + excessValue / 100);
+      item.m = item.n * p.M;
+      const pur = (Number(a.purity) || 0) / 100;
+      item.mActual = pur > 0 ? item.m / pur : NaN;
+    }
+    out.aux.push(item);
+  });
+
+  // 浓度
+  const V = Number(st.solvent) || 0;
+  if(V > 0){
+    out.rows.forEach(it => { if(it.ok) out.conc.push({ el:it.el, c: it.n / (V / 1000) }); });
+  }
+
+  // 产物与电荷平衡
+  if(Mp) out.productMass = (N / structure.cations) * Mp;
+  let charge = 0;
+  let chargeComplete = true;
+  st.rows.forEach(row => {
+    const oxidation = row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '' ? NaN : Number(row.oxidation);
+    if(!isFinite(oxidation)){ chargeComplete = false; }
+    else charge += out.coefficients[row.el] * oxidation;
+  });
+  if(chargeComplete){
+    const residual = charge - structure.oxygen * 2;
+    out.chargeBalance = { residual, ok:Math.abs(residual) < 0.05 };
+    if(!out.chargeBalance.ok) out.warnings.push('电荷不平衡：阳离子总价态 ' + num(charge, 3) + '，氧离子总电荷 −' + (structure.oxygen * 2) + '；残差 ' + num(residual, 3) + '。请核对氧化态或组成，计算器不会自动修改配方。');
+  } else {
+    out.warnings.push('至少一个元素未填写有效氧化态，无法检查电荷平衡。');
+  }
+  out.rows.forEach(it => { if(!it.ok) out.warnings.push(it.el + ' 前驱体无效：' + it.err); });
+  out.aux.forEach(it => { if(!it.ok) out.warnings.push(it.name + ' 的化学式无法解析：' + it.err); });
+
+  out.ok = true;
+  return out;
+}
+
+/* ==================================================================
+   表格渲染
+   ================================================================== */
+const saltBody = document.getElementById('saltBody');
+const auxBody = document.getElementById('auxBody');
+const rowRefs = [];
+
+function buildSaltRow(r, idx){
+  const tr = document.createElement('tr');
+  tr.innerHTML =
+    '<td><input type="text" class="el" style="min-width:52px"></td>' +
+    '<td><select class="site"><option value="A">A 位</option><option value="B">B 位</option></select></td>' +
+    '<td class="c-num"><input type="number" class="ratio" step="any" min="0"></td>' +
+    '<td class="c-num"><input type="number" class="oxidation" step="any"></td>' +
+    '<td><input type="text" class="salt" spellcheck="false"></td>' +
+    '<td><select class="form"><option value="solid">固体</option><option value="solution">溶液</option></select></td>' +
+    '<td class="c-num"><input type="number" class="purity" step="any" min="0"></td>' +
+    '<td class="c-num"><input type="number" class="density" step="any" min="0"></td>' +
+    '<td class="cell-out out"></td>' +
+    '<td><button class="del" title="删除">×</button></td>';
+  const elIn = tr.querySelector('.el');
+  const siteIn = tr.querySelector('.site');
+  const saltIn = tr.querySelector('.salt');
+  const ratioIn = tr.querySelector('.ratio');
+  const oxidationIn = tr.querySelector('.oxidation');
+  const formIn = tr.querySelector('.form');
+  const purIn = tr.querySelector('.purity');
+  const denIn = tr.querySelector('.density');
+  const outCell = tr.querySelector('.out');
+  const delBtn = tr.querySelector('.del');
+
+  elIn.value = r.el; siteIn.value = r.site || defaultSite(r.el); saltIn.value = r.salt; ratioIn.value = r.ratio; oxidationIn.value = r.oxidation;
+  formIn.value = r.form; purIn.value = r.form === 'solution' ? r.conc : r.purity; denIn.value = r.density;
+  syncForm(r, formIn, purIn, denIn);
+
+  elIn.addEventListener('input', () => {
+    const old = r.el;
+    r.el = elIn.value.trim();
+    if(!r.salt || r.salt === SALT_DEFAULTS[old]){ r.salt = SALT_DEFAULTS[r.el] || r.salt; saltIn.value = r.salt; }
+    if(r.oxidation === defaultOxidation(old)){ r.oxidation = defaultOxidation(r.el); oxidationIn.value = r.oxidation; }
+    paint();
+  });
+  siteIn.addEventListener('change', () => { r.site = siteIn.value; paint(); });
+  saltIn.addEventListener('input', () => { r.salt = saltIn.value; paint(); });
+  ratioIn.addEventListener('input', () => { r.ratio = Number(ratioIn.value) || 0; paint(); });
+  oxidationIn.addEventListener('input', () => { r.oxidation = oxidationIn.value.trim() === '' ? null : Number(oxidationIn.value); paint(); });
+  formIn.addEventListener('change', () => {
+    r.form = formIn.value;
+    syncForm(r, formIn, purIn, denIn);
+    paint();
+  });
+  purIn.addEventListener('input', () => {
+    const v = Number(purIn.value) || 0;
+    if(r.form === 'solution') r.conc = v; else r.purity = v;
+    paint();
+  });
+  denIn.addEventListener('input', () => { r.density = Number(denIn.value) || 0; paint(); });
+  delBtn.addEventListener('click', () => {
+    st.rows.splice(st.rows.indexOf(r), 1);
+    tr.remove();
+    rowRefs.splice(rowRefs.indexOf(ref), 1);
+    paint();
+  });
+
+  const ref = { r, tr, elIn, siteIn, saltIn, ratioIn, oxidationIn, formIn, purIn, denIn, outCell };
+  rowRefs.push(ref);
+  return tr;
+}
+
+function syncForm(r, formIn, purIn, denIn){
+  const isSol = r.form === 'solution';
+  purIn.placeholder = isSol ? 'wt %' : '99';
+  denIn.disabled = !isSol;
+  denIn.style.opacity = isSol ? '1' : '.45';
+  denIn.placeholder = isSol ? '1.54' : '—';
+  purIn.value = isSol ? (r.conc || '') : (r.purity || '');
+  denIn.value = isSol ? (r.density || '') : '';
+}
+
+function renderSaltTable(){
+  saltBody.innerHTML = '';
+  rowRefs.length = 0;
+  st.rows.forEach(r => saltBody.appendChild(buildSaltRow(r)));
+}
+
+function renderAuxTable(){
+  auxBody.innerHTML = '';
+  st.aux.forEach(a => {
+    if(!a.kind){ a.kind = a.formula === 'C2H5NO2' ? 'fixed' : (a.name.indexOf('EDTA') >= 0 ? 'edta' : 'citrate'); }
+    if(a.formIndex === undefined) a.formIndex = Math.max(0, (AUX_FORMS[a.kind] || []).findIndex(form => form.formula === a.formula));
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><input type="text" class="aname" style="min-width:130px"></td>' +
+      '<td><select class="aform-kind"></select></td>' +
+      '<td><input type="text" class="aform" spellcheck="false"></td>' +
+      '<td class="c-num"><input type="number" class="aper" step="any" min="0"></td>' +
+      '<td class="c-num"><input type="number" class="apur" step="any" min="0"></td>' +
+      '<td class="cell-out am"></td>' +
+      '<td class="cell-out aout"></td>';
+    tr.querySelector('.aname').value = a.name;
+    tr.querySelector('.aform').value = a.formula;
+    const formKind = tr.querySelector('.aform-kind');
+    const options = AUX_FORMS[a.kind] || [{label:'无水物', formula:a.formula}];
+    formKind.innerHTML = options.map((form, index) => '<option value="' + index + '">' + form.label + '</option>').join('');
+    formKind.value = String(a.formIndex);
+    tr.querySelector('.aper').value = a.per;
+    tr.querySelector('.apur').value = a.purity;
+    tr.querySelector('.aname').addEventListener('input', e => { a.name = e.target.value; paint(); });
+    tr.querySelector('.aform').addEventListener('input', e => { a.formula = e.target.value; paint(); });
+    formKind.addEventListener('change', () => {
+      a.formIndex = Number(formKind.value);
+      a.formula = options[a.formIndex].formula;
+      tr.querySelector('.aform').value = a.formula;
+      paint();
+    });
+    tr.querySelector('.aper').addEventListener('input', e => { a.per = Number(e.target.value) || 0; paint(); });
+    tr.querySelector('.apur').addEventListener('input', e => { a.purity = Number(e.target.value) || 0; paint(); });
+    auxBody.appendChild(tr);
+  });
+}
+
+/* ==================================================================
+   结果输出
+   ================================================================== */
+const $ = id => document.getElementById(id);
+function escapeHTML(value){
+  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function paint(){
+  const res = compute();
+
+  // 表格输出
+  rowRefs.forEach(ref => {
+    const item = res.rows[rowRefs.indexOf(ref)];
+    ref.tr.classList.toggle('invalid', !!item && !item.ok);
+    if(!item){ ref.outCell.textContent = '—'; return; }
+    if(!item.ok){
+      ref.outCell.className = 'cell-out err';
+      ref.outCell.textContent = item.err;
+    } else {
+      ref.outCell.className = 'cell-out out';
+      if(ref.r.form === 'solution'){
+        ref.outCell.innerHTML = fmtMass(item.msol) + '<small>溶液 · ' + fmtVol(item.vol) + '</small>';
+      } else {
+        ref.outCell.innerHTML = fmtMass(item.mActual) + '<small>理论 ' + fmtMass(item.m) + '</small>';
+      }
+    }
+  });
+
+  // aux 输出
+  const auxRows = auxBody.querySelectorAll('tr');
+  auxRows.forEach((tr, idx) => {
+    const item = res.aux[idx];
+    if(!item){ tr.querySelector('.aout').textContent = '—'; tr.querySelector('.am').textContent = '—'; return; }
+    const out = tr.querySelector('.aout');
+    const mm = tr.querySelector('.am');
+    if(!item.ok){ out.className = 'cell-out err'; out.textContent = item.err; mm.textContent = '—'; return; }
+    out.className = 'cell-out aout';
+    out.innerHTML = fmtMass(item.mActual) + '<small>理论 ' + fmtMass(item.m) + '</small>';
+    mm.textContent = item.M.toFixed(2);
+  });
+
+  // 摘要
+  $('sTotal').textContent = res.ok ? fmtMmol(res.N) : '—';
+  $('sSum').textContent = res.S ? res.S.toFixed(3) : '—';
+  $('sProd').textContent = (res.ok && res.S > 0) ? fmtMmol(res.N / res.S) : '—';
+  $('sProdM').textContent = res.productM ? res.productM.toFixed(2) + ' g/mol' : '—';
+  if(!st.prodM && res.productM !== null) $('prodM').placeholder = res.productM.toFixed(2) + '（自动）';
+  $('sProdMass').textContent = (res.productMass !== undefined) ? fmtMass(res.productMass) : '—';
+  $('sCharge').textContent = res.chargeBalance
+    ? (res.chargeBalance.ok ? '平衡' : '不平衡 · ' + num(res.chargeBalance.residual, 3))
+    : '待检查';
+
+  // 硝酸盐清单
+  const resSalts = $('resSalts');
+  resSalts.innerHTML = '';
+  res.rows.forEach(it => {
+    const tr = document.createElement('tr');
+    if(!it.ok){
+      tr.innerHTML = '<td class="name">' + escapeHTML(it.site + ' 位 · ' + it.el) + '<span>' + escapeHTML(it.salt || '—') + '</span></td>' +
+        '<td class="n">—</td><td class="m" style="color:#b0522a">化学式有误</td>';
+    } else {
+      let amount;
+      if(it.msol !== undefined){
+        amount = fmtMass(it.msol) + '<small>' + fmtVol(it.vol) + '</small>';
+      } else {
+        amount = fmtMass(it.mActual) + '<small>理论 ' + fmtMass(it.m) + '</small>';
+      }
+      tr.innerHTML = '<td class="name">' + escapeHTML(it.site + ' 位 · ' + it.el) + ' · ' + (it.coefficient).toFixed(3) + '<span>' + escapeHTML(it.salt) + '</span></td>' +
+        '<td class="n">' + num(it.n * 1000, 3) + '</td><td class="m">' + amount + '</td>';
+    }
+    resSalts.appendChild(tr);
+  });
+
+  // aux 清单
+  const resAux = $('resAux');
+  resAux.innerHTML = '';
+  res.aux.forEach(it => {
+    const tr = document.createElement('tr');
+    if(!it.ok){
+      tr.innerHTML = '<td class="name">' + escapeHTML(it.name) + '<span>' + escapeHTML(it.formula) + '</span></td><td class="n">—</td><td class="m" style="color:#b0522a">化学式有误</td>';
+    } else {
+      tr.innerHTML = '<td class="name">' + escapeHTML(it.name) + '<span>' + escapeHTML(it.formula) + ' · M ' + it.M.toFixed(2) + '</span></td>' +
+        '<td class="n">' + num(it.n * 1000, 3) + '</td>' +
+        '<td class="m">' + fmtMass(it.mActual) + '<small>理论 ' + fmtMass(it.m) + '</small></td>';
+    }
+    resAux.appendChild(tr);
+  });
+
+  // 浓度
+  if(res.conc.length){
+    $('concBox').classList.remove('hidden');
+    const box = $('resConc');
+    box.innerHTML = '';
+    res.conc.forEach(c => {
+      const tr = document.createElement('tr');
+      tr.innerHTML = '<td class="name">' + c.el + ' 总浓度</td><td class="m">' + num(c.c, 4) + ' mol/L</td>';
+      box.appendChild(tr);
+    });
+  } else {
+    $('concBox').classList.add('hidden');
+  }
+
+  // 警告
+  const warnBox = $('warnBox');
+  if(res.warnings.length){
+    warnBox.innerHTML = res.warnings.map(w => '<div class="note warn">' + escapeHTML(w) + '</div>').join('');
+  } else {
+    warnBox.innerHTML = '';
+  }
+
+  // 页脚
+  $('footStamp').textContent = '更新 ' + new Date().toLocaleTimeString('zh-CN', { hour:'2-digit', minute:'2-digit' });
+  save();
+}
+
+/* ==================================================================
+   复制 / 导出 / 打印
+   ================================================================== */
+function buildText(){
+  const res = compute();
+  const mname = st.method === 'edta' ? 'EDTA 溶胶-凝胶法' : '硝酸盐燃烧法';
+  const lines = [];
+  lines.push('【合成配方】' + mname);
+  lines.push('结构 ' + ((structureInfo() || STRUCTURES.perovskite).label));
+  lines.push('产物 ' + (st.prodFormula || '—') + '，' + $('basisHint').textContent + '：' + fmtMmol(res.N));
+  lines.push('');
+  lines.push('—— 硝酸盐 ——');
+  res.rows.forEach(it => {
+    if(!it.ok){ lines.push(it.el + ' ' + it.salt + ' 化学式有误'); return; }
+    lines.push(it.site + ' 位 · ' + it.el + ' · ' + it.salt + '  ' + num(it.n * 1000, 3) + ' mmol  ' + fmtMass(it.mActual));
+  });
+  lines.push('');
+  lines.push('—— ' + (st.method === 'edta' ? '螯合剂' : '燃料 / 螯合剂') + ' ——');
+  res.aux.forEach(it => {
+    if(!it.ok) return;
+    lines.push(it.name + '（' + it.formula + '）  ' + num(it.n * 1000, 3) + ' mmol  ' + fmtMass(it.mActual));
+  });
+  lines.push('');
+  lines.push('总金属 ' + fmtMmol(res.N) + '；结构计量 A+B = ' + res.S.toFixed(3));
+  if(res.chargeBalance) lines.push('电荷平衡 ' + (res.chargeBalance.ok ? '通过' : '未通过，残差 ' + num(res.chargeBalance.residual, 3)));
+  if(st.auxExcess > 0) lines.push('螯合剂 / 燃料额外过量 ' + st.auxExcess + '%');
+  if(res.productMass !== undefined) lines.push('理论产物 ' + fmtMass(res.productMass) + '（M = ' + res.productM.toFixed(2) + ' g/mol）');
+  if(res.conc.length) lines.push('定容 ' + st.solvent + ' mL：' + res.conc.map(c => c.el + ' ' + num(c.c, 4) + ' M').join('，'));
+  if(res.warnings.length) lines.push('警告：' + res.warnings.join('；'));
+  return lines.join('\n');
+}
+
+function buildCSV(){
+  const res = compute();
+  const rows = [['类型','晶位','组分','化学式','晶位化学计量系数','mmol','理论质量(g)','实称(g或mL)']];
+  res.rows.forEach(it => {
+    if(!it.ok) return;
+    rows.push(['硝酸盐', it.site, it.el, it.salt, it.coefficient, (it.n * 1000).toFixed(4), (it.m || 0).toFixed(6),
+      (it.msol !== undefined ? (it.msol.toFixed(6) + ' g 溶液') : (it.mActual || 0).toFixed(6))]);
+  });
+  res.aux.forEach(it => {
+    if(!it.ok) return;
+    rows.push([st.method === 'edta' ? '螯合剂' : '燃料', '', it.name, it.formula, it.per, (it.n * 1000).toFixed(4),
+      it.m.toFixed(6), (it.mActual || 0).toFixed(6)]);
+  });
+  return rows.map(r => r.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n');
+}
+
+function download(name, text){
+  const blob = new Blob(['\ufeff' + text], { type:'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = name;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+}
+
+/* ==================================================================
+   事件绑定
+   ================================================================== */
+function setMethod(method){
+  const changed = st.method !== method;
+  st.method = method;
+  if(changed) st.aux = auxFor(method);
+  document.querySelectorAll('#methodSwitch button').forEach(b => b.classList.toggle('active', b.dataset.method === method));
+  $('methodBadge').textContent = method === 'edta' ? 'EDTA 法' : '燃烧法';
+  $('auxTitle').textContent = method === 'edta' ? '螯合剂' : '燃料与螯合剂';
+  $('auxHint').textContent = method === 'edta'
+    ? '默认 M:EDTA:柠檬酸 = 1:1:2；可修改的用户配方比例'
+    : '默认 M:甘氨酸:柠檬酸 = 1:2:1；非理论燃烧氧化还原平衡';
+  $('protocol').innerHTML = method === 'edta'
+    ? '<strong>EDTA 溶胶-凝胶法 · 配方提示</strong>默认金属 : EDTA : 柠檬酸 = 1 : 1 : 2（摩尔），比例可调整；这是实验设定配方比例，不是自动推导的理论化学计量平衡。EDTA 游离酸常温溶解度低，可选择二钠盐形态。'
+    : '<strong>硝酸盐燃烧法 · 配方提示</strong>默认金属 : 甘氨酸 : 柠檬酸 = 1 : 2 : 1（摩尔），比例可调整；这是实验配方默认值，不代表已完成燃烧氧化还原当量平衡。';
+  renderAuxTable();
+  paint();
+}
+
+function applyPreset(key){
+  const def = PRESETS[key];
+  st.rows = def.map(([el, ratio]) => newRow(el, SALT_DEFAULTS[el], ratio));
+  st.structure = key === 'La2NiO4' ? 'rp' : 'perovskite';
+  st.rpN = 1;
+  $('structure').value = st.structure;
+  $('rpN').value = st.rpN;
+  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  updateStructureHint();
+  if(key === 'LSM') st.rows.find(row => row.el === 'Mn').oxidation = 3.4;
+  if(key === 'La2NiO4') st.rows.find(row => row.el === 'Ni').oxidation = 2;
+  renderSaltTable();
+  if(key !== 'clear'){
+    // 产物化学式随预设同步
+    const map = { LaMnO3:'LaMnO3', LSM:'La0.6Sr0.4MnO3', LaCoO3:'LaCoO3', LSCF:'La0.6Sr0.4Co0.2Fe0.8O3', La2NiO4:'La2NiO4' };
+    if(map[key]){
+      st.prodFormula = map[key];
+      $('prodFormula').value = map[key];
+      st.prodM = null;
+      $('prodM').value = '';
+    }
+  }
+  paint();
+}
+
+function save(){
+  try{
+    localStorage.setItem('nitrateCalc.v1', JSON.stringify(st));
+  }catch(e){}
+}
+function applySettings(settings){
+  const root = document.documentElement;
+  const family = String(settings.fontFamily || '').trim().replace(/["\\;{}]/g, '').slice(0, 80);
+  const size = Math.min(24, Math.max(10, Number(settings.fontSize) || 14));
+  if(family){
+    const stack = '"' + family + '", "Microsoft YaHei", sans-serif';
+    root.style.setProperty('--sans', stack);
+    root.style.setProperty('--mono', stack);
+  } else {
+    root.style.removeProperty('--sans');
+    root.style.removeProperty('--mono');
+  }
+  root.style.setProperty('--ui-zoom', String(size / 14));
+  return { fontFamily:family, fontSize:size };
+}
+function load(){
+  try{
+    const raw = localStorage.getItem('nitrateCalc.v1');
+    if(!raw) return;
+    const o = JSON.parse(raw);
+    if(o && o.rows && o.aux){
+      st = Object.assign(st, o);
+      if(st.structure !== 'rp' && !STRUCTURES[st.structure]) st.structure = 'perovskite';
+      if(st.rpN === undefined) st.rpN = 1;
+      if(st.auxExcess === undefined) st.auxExcess = 0;
+      st.settings = Object.assign({ fontFamily:'', fontSize:14 }, o.settings || {});
+      st.rows.forEach(row => {
+        if(!row.site) row.site = defaultSite(row.el);
+        if(row.oxidation === undefined) row.oxidation = defaultOxidation(row.el);
+      });
+    }
+  }catch(e){}
+}
+
+function addElementRow(el, site){
+  const row = newRow(el, SALT_DEFAULTS[el] || '', 1);
+  row.site = site === 'A' ? 'A' : 'B';
+  st.rows.push(row);
+  saltBody.appendChild(buildSaltRow(row));
+  paint();
+}
+
+/* 初始化 */
+(function init(){
+  load();
+
+  // 元素选择器
+  const sel = $('addElement');
+  const groups = [
+    {label:'常用 A 位 / 主族', elements:['Li','Na','K','Mg','Ca','Sr','Ba','Y']},
+    {label:'过渡金属与其他', elements:['Al','Cr','Mn','Fe','Co','Ni','Cu','Zn','Zr','Ag','Cd','Bi','Pb']},
+    {label:'镧系元素', elements:['La','Ce','Pr','Nd','Sm','Eu','Gd','Tb','Dy','Ho','Er','Tm','Yb','Lu']}
+  ];
+  groups.forEach(group => {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = group.label;
+    group.elements.forEach(el => {
+      const option = document.createElement('option');
+      option.value = el;
+      option.textContent = el + (SALT_DEFAULTS[el] ? ' · ' + SALT_DEFAULTS[el] : ' · 手动配置前驱体');
+      optgroup.appendChild(option);
+    });
+    sel.appendChild(optgroup);
+  });
+  const picker = $('elementPicker');
+  groups.forEach(group => {
+    const label = document.createElement('div');
+    label.className = 'picker-label';
+    label.textContent = group.label;
+    picker.appendChild(label);
+    group.elements.forEach(el => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = el;
+      button.title = (SALT_DEFAULTS[el] || '无可靠默认前驱体；请手动配置') + ' · 添加到 ' + $('addSite').value + ' 位';
+      button.addEventListener('click', () => addElementRow(el, $('addSite').value));
+      picker.appendChild(button);
+    });
+  });
+  $('structure').value = st.structure;
+  $('rpN').value = st.rpN;
+  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  updateStructureHint();
+  $('structure').addEventListener('change', e => {
+    st.structure = e.target.value;
+    $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+    updateStructureHint();
+    paint();
+  });
+  $('rpN').addEventListener('input', e => {
+    st.rpN = Number(e.target.value);
+    updateStructureHint();
+    paint();
+  });
+  $('auxExcess').value = st.auxExcess;
+  $('auxExcess').addEventListener('input', e => { st.auxExcess = Number(e.target.value) || 0; paint(); });
+
+  // 方法切换
+  document.querySelectorAll('#methodSwitch button').forEach(b => {
+    b.addEventListener('click', () => setMethod(b.dataset.method));
+  });
+
+  // 基准
+  const applyBasis = resetAmount => {
+    const isMass = st.basis === 'productMass';
+    const unitSel = $('amountUnit');
+    const opts = isMass ? ['g','mg'] : ['mmol','mol'];
+    unitSel.innerHTML = opts.map(u => '<option value="' + u + '">' + u + '</option>').join('');
+    if(resetAmount){
+      st.amountUnit = isMass ? 'g' : 'mmol';
+      st.amount = isMass ? 0.5 : 2;
+    } else if(opts.indexOf(st.amountUnit) < 0){
+      st.amountUnit = opts[0];
+    }
+    unitSel.value = st.amountUnit;
+    $('amount').value = st.amount;
+    $('basisHint').textContent = isMass ? '按产物质量计量'
+      : (st.basis === 'productMol' ? '按产物物质的量计量' : '按总金属计量');
+    paint();
+  };
+  $('basis').value = st.basis;
+  applyBasis(false);
+  $('basis').addEventListener('change', e => {
+    st.basis = e.target.value;
+    applyBasis(true);
+  });
+
+  $('amount').addEventListener('input', e => { st.amount = Number(e.target.value) || 0; paint(); });
+  $('amountUnit').addEventListener('change', e => { st.amountUnit = e.target.value; paint(); });
+
+  $('prodFormula').value = st.prodFormula;
+  let formulaAdaptTimer = null;
+  const autoAdaptFormula = () => {
+    const parsed = parseFormula(st.prodFormula);
+    if(!parsed.ok){
+      $('formulaAutoHint').textContent = '';
+      return;
+    }
+    const match = recognizeStructure(parsed.counts);
+    if(!match){
+      $('formulaAutoHint').textContent = '暂未匹配到常见钙钛矿、尖晶石或 RP 相化学计量；当前结构和配比未更改。';
+      return;
+    }
+    adaptFromFormula(parsed, match);
+    st.prodM = null;
+    $('prodM').value = '';
+    $('prodM').placeholder = parsed.M.toFixed(2) + '（自动）';
+    paint();
+  };
+  $('prodFormula').addEventListener('input', e => {
+    st.prodFormula = e.target.value;
+    const p = parseFormula(st.prodFormula);
+    if(p.ok && !st.prodM){ $('prodM').placeholder = p.M.toFixed(2); }
+    paint();
+    clearTimeout(formulaAdaptTimer);
+    formulaAdaptTimer = setTimeout(autoAdaptFormula, 550);
+  });
+  $('prodFormula').addEventListener('change', () => {
+    clearTimeout(formulaAdaptTimer);
+    autoAdaptFormula();
+  });
+  $('prodM').addEventListener('input', e => { st.prodM = Number(e.target.value) || null; paint(); });
+
+  // 溶剂
+  $('solvent').value = st.solvent;
+  $('solvent').addEventListener('input', e => { st.solvent = Number(e.target.value) || 0; paint(); });
+  $('toggleSolvent').addEventListener('click', () => {
+    $('solventRow').classList.toggle('hidden');
+  });
+
+  // 添加行
+  $('addRow').addEventListener('click', () => addElementRow($('addElement').value || 'La', $('addSite').value));
+
+  // 从产物化学式反推配比
+  $('loadFromFormula').addEventListener('click', () => {
+    const p = parseFormula(st.prodFormula);
+    if(!p.ok){ alert('产物化学式无法解析：' + p.error); return; }
+    const els = Object.keys(p.counts).filter(e => e !== 'O' && e in AW);
+    if(!els.length){ alert('化学式中没有可用的金属元素'); return; }
+    const match = recognizeStructure(p.counts);
+    if(match){
+      adaptFromFormula(p, match);
+      st.prodM = null;
+      $('prodM').value = '';
+      $('prodM').placeholder = p.M.toFixed(2) + '（自动）';
+      paint();
+      return;
+    }
+    st.rows = els.map(e => newRow(e, SALT_DEFAULTS[e] || '', p.counts[e]));
+    if(st.structure !== 'perovskite' && st.rows.every(row => row.site !== 'A')) st.rows[0].site = 'A';
+    renderSaltTable();
+    paint();
+  });
+
+  // 预设
+  document.querySelectorAll('.chip').forEach(c => {
+    c.addEventListener('click', () => applyPreset(c.dataset.preset));
+  });
+
+  $('resetBtn').addEventListener('click', () => {
+    if(!confirm('重置为初始状态？')) return;
+    localStorage.removeItem('nitrateCalc.v1');
+    location.reload();
+  });
+
+  $('copyBtn').addEventListener('click', async () => {
+    const text = buildText();
+    try{
+      await navigator.clipboard.writeText(text);
+      $('copyBtn').textContent = '已复制 ✓';
+      setTimeout(() => { $('copyBtn').textContent = '复制配方单'; }, 1600);
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = text; document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); ta.remove();
+      $('copyBtn').textContent = '已复制 ✓';
+      setTimeout(() => { $('copyBtn').textContent = '复制配方单'; }, 1600);
+    }
+  });
+  $('csvBtn').addEventListener('click', () => {
+    download('合成配方_' + new Date().toISOString().slice(0, 10) + '.csv', buildCSV());
+  });
+  $('printBtn').addEventListener('click', () => window.print());
+
+  // 字体设置
+  const settingsDialog = $('settingsDialog');
+  let settingsBeforeEdit = null;
+  let settingsCommitted = false;
+  const currentSettings = applySettings(st.settings || { fontFamily:'', fontSize:14 });
+  st.settings = currentSettings;
+  $('fontFamily').value = currentSettings.fontFamily;
+  $('fontSize').value = currentSettings.fontSize;
+  const previewSettings = () => {
+    applySettings({ fontFamily:$('fontFamily').value, fontSize:$('fontSize').value });
+  };
+  $('settingsBtn').addEventListener('click', () => {
+    settingsBeforeEdit = Object.assign({}, st.settings);
+    settingsCommitted = false;
+    $('fontFamily').value = st.settings.fontFamily;
+    $('fontSize').value = st.settings.fontSize;
+    settingsDialog.showModal();
+  });
+  $('fontFamily').addEventListener('input', previewSettings);
+  $('fontSize').addEventListener('input', previewSettings);
+  $('settingsCancel').addEventListener('click', () => settingsDialog.close());
+  $('settingsClose').addEventListener('click', () => settingsDialog.close());
+  $('settingsForm').addEventListener('submit', event => {
+    event.preventDefault();
+    st.settings = applySettings({ fontFamily:$('fontFamily').value, fontSize:$('fontSize').value });
+    settingsCommitted = true;
+    save();
+    settingsDialog.close();
+  });
+  settingsDialog.addEventListener('close', () => {
+    if(!settingsCommitted && settingsBeforeEdit){
+      st.settings = applySettings(settingsBeforeEdit);
+      $('fontFamily').value = st.settings.fontFamily;
+      $('fontSize').value = st.settings.fontSize;
+    }
+    settingsBeforeEdit = null;
+  });
+
+  // 应用上次方法
+  setMethod(st.method || 'edta');
+  renderSaltTable();
+  paint();
+})();
+</script>
+</body>
+</html>
