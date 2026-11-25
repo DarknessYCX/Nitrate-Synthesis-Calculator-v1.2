@@ -277,5 +277,3 @@ Released under the **MIT License**. See [LICENSE](LICENSE) for the full text.
 ## Disclaimer
 
 This software is a stoichiometry aid for research use. The authors give no warranty of fitness for a particular synthesis and accept no liability for experimental outcomes. Verify every number against your own reagents and protocol before weighing.
-
-> （注：部分内容由豆包 AI 生成）
