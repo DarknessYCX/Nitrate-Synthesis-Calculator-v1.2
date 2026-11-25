@@ -493,21 +493,34 @@ function adaptFromFormula(parsed, match){
   st.structure = match.structure;
   st.rpN = match.n;
   const elements = Object.keys(parsed.counts).filter(element => element !== 'O');
-  st.rows = elements.map(element => newRow(element, SALT_DEFAULTS[element] || '', parsed.counts[element]));
+  const previousRows = new Map(st.rows.map(row => [row.el, row]));
+  st.rows = elements.map(element => {
+    const row = previousRows.get(element) || newRow(element, SALT_DEFAULTS[element] || '', parsed.counts[element]);
+    row.site = defaultSite(element);
+    row.ratio = parsed.counts[element];
+    return row;
+  });
   const structure = structureInfo();
   const aCharge = st.rows.reduce((sum, row) => sum + (row.site === 'A' ? Number(row.ratio) * Number(row.oxidation) : 0), 0);
   const bRows = st.rows.filter(row => row.site === 'B');
   if(bRows.length === 1){
     const bCount = Number(bRows[0].ratio);
     const oxidation = (structure.oxygen * 2 - aCharge) / bCount;
-    if(isFinite(oxidation) && oxidation > 0) bRows[0].oxidation = Number(oxidation.toFixed(4));
+    if(isFinite(oxidation) && oxidation > 0 &&
+      (!previousRows.has(bRows[0].el) || bRows[0].autoOxidation || bRows[0].oxidation === defaultOxidation(bRows[0].el))){
+      bRows[0].oxidation = Number(oxidation.toFixed(4));
+      bRows[0].autoOxidation = true;
+    }
   }
   $('structure').value = st.structure;
   $('rpN').value = st.rpN;
   $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
   updateStructureHint();
   renderSaltTable();
-  $('formulaAutoHint').textContent = '已识别为' + match.label + '；结构和晶位配比已自动适配。';
+  const deltaNote = /[+₊−₋-](?:δ|Δ)$/i.test(st.prodFormula.replace(/\s+/g, ''))
+    ? 'δ 未指定数值，摩尔质量按基准氧含量计算。'
+    : '';
+  $('formulaAutoHint').textContent = '已识别为' + match.label + '；结构和晶位配比已自动适配。' + deltaNote;
 }
 function structureInfo(){
   if(st.structure === 'rp'){
@@ -793,7 +806,7 @@ function buildSaltRow(r, idx){
   siteIn.addEventListener('change', () => { r.site = siteIn.value; paint(); });
   saltIn.addEventListener('input', () => { r.salt = saltIn.value; paint(); });
   ratioIn.addEventListener('input', () => { r.ratio = Number(ratioIn.value) || 0; paint(); });
-  oxidationIn.addEventListener('input', () => { r.oxidation = oxidationIn.value.trim() === '' ? null : Number(oxidationIn.value); paint(); });
+  oxidationIn.addEventListener('input', () => { r.oxidation = oxidationIn.value.trim() === '' ? null : Number(oxidationIn.value); r.autoOxidation = false; paint(); });
   formIn.addEventListener('change', () => {
     r.form = formIn.value;
     syncForm(r, formIn, purIn, denIn);
