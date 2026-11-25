@@ -134,6 +134,7 @@
     .card{box-shadow:none;page-break-inside:avoid}
     .panel-body{max-height:none;overflow:visible}
   }
+  #saltTable.free-mode th:nth-child(2), #saltTable.free-mode td:nth-child(2) { display:none; }
 </style>
 </head>
 <body>
@@ -157,21 +158,25 @@
 
       <!-- ===== 1 材料结构 ===== -->
       <section class="card">
-        <div class="card-head"><span class="num">1</span><h2>材料结构与组成设计</h2><span class="hint">晶位占位分别归一化</span></div>
+        <div class="card-head"><span class="num">1</span><h2>材料结构与组成设计</h2><span class="hint">晶体结构 · 位点计量</span></div>
         <div class="card-body">
           <div class="field-row">
-            <div class="field" style="flex:0 0 220px">
+            <div class="field" style="flex:0 0 246px">
               <label>晶体结构</label>
               <select id="structure">
                 <option value="perovskite">钙钛矿 ABO₃（A:B = 1:1）</option>
                 <option value="spinel">尖晶石 AB₂O₄（A:B = 1:2）</option>
                 <option value="rp">RP 相钙钛矿 Aₙ₊₁BₙO₃ₙ₊₁</option>
-                <option value="other">其他氧化物（自由组成，按原子个数）</option>
+                <option value="other">其他氧化物（自由组成）</option>
               </select>
             </div>
             <div class="field hidden" id="rpNField" style="flex:0 0 120px">
               <label>RP 层数 n</label>
               <input type="number" id="rpN" step="1" min="1" value="1">
+            </div>
+            <div class="field hidden" id="oxygenField" style="flex:0 0 132px">
+              <label>氧原子数 O（可留空）</label>
+              <input type="number" id="freeOxygen" step="any" min="0" placeholder="留空＝按氧化态推出">
             </div>
             <div class="unit-inline" id="structureHint">A 位总占位量 1；B 位总占位量 1。各位点输入相对占位比例，计算时分别归一化。</div>
           </div>
@@ -212,20 +217,20 @@
             </div>
           </div>
           <div id="formulaAutoHint" aria-live="polite"></div>
-          <div class="unit-inline" style="margin-top:10px;display:block">化学式必须与晶位组成及结构氧含量一致；摩尔质量由化学式与 IUPAC 原子量实时计算。</div>
+          <div class="unit-inline" id="formulaNote" style="margin-top:10px;display:block">化学式必须与晶位组成及结构氧含量一致；摩尔质量由化学式与 IUPAC 原子量实时计算。</div>
         </div>
       </section>
 
       <!-- ===== 3 元素与硝酸盐 ===== -->
       <section class="card">
-        <div class="card-head"><span class="num">3</span><h2>元素与硝酸盐</h2><span class="hint">硝酸盐 / 氯化物 / 醋酸盐等均可</span></div>
+        <div class="card-head"><span class="num">3</span><h2>元素与前驱体</h2><span class="hint" id="tableHint">硝酸盐 / 氯化物 / 醋酸盐等均可</span></div>
         <div class="card-body">
           <div class="table-scroll">
             <table id="saltTable">
               <thead>
                 <tr>
                   <th style="width:62px">元素</th>
-                  <th style="width:62px">晶位</th>
+                  <th style="width:62px" id="siteTh">晶位</th>
                   <th class="r" style="width:76px">占位比例</th>
                   <th class="r" style="width:76px">氧化态</th>
                   <th style="width:186px">金属前驱体化学式</th>
@@ -653,9 +658,45 @@ function recognizeStructure(counts, siteOf){
   return null;
 }
 
+/* 自由组成下表里没有晶位：按元素划分 A/B 位尝试匹配标准计量，返回最优方案与位点分配 */
+function recognizeStructureByPartition(counts){
+  const cations = Object.keys(counts).filter(element => element !== 'O' && counts[element] > 0);
+  if(cations.length < 2 || cations.length > 12) return null;
+  const oxygen = counts.O || 0;
+  const close = (a, b) => Math.abs(a - b) < 1e-6;
+  const candidates = [];
+  for(let mask = 0; mask < (1 << cations.length); mask++){
+    let aTotal = 0, bTotal = 0;
+    const assign = {};
+    for(let index = 0; index < cations.length; index++){
+      const element = cations[index];
+      const value = counts[element];
+      if(mask & (1 << index)){ aTotal += value; assign[element] = 'A'; }
+      else { bTotal += value; assign[element] = 'B'; }
+    }
+    if(!(aTotal > 0) || !(bTotal > 0)) continue;
+    let score = 0;
+    cations.forEach(element => { if(defaultSite(element) === assign[element]) score += 1; });
+    if(close(aTotal, 1) && close(bTotal, 1) && close(oxygen, 3)){
+      candidates.push({ structure:'perovskite', n:1, assign, score, rank:0, label:'钙钛矿 ABO₃' });
+    }
+    if(close(aTotal, 1) && close(bTotal, 2) && close(oxygen, 4)){
+      candidates.push({ structure:'spinel', n:1, assign, score, rank:1, label:'尖晶石 AB₂O₄' });
+    }
+    const n = Math.round(bTotal);
+    if(n >= 1 && Number.isSafeInteger(n) && close(aTotal, n + 1) && close(oxygen, 3 * n + 1)){
+      candidates.push({ structure:'rp', n, assign, score, rank:2, label:'RP 相钙钛矿 Aₙ₊₁BₙO₃ₙ₊₁（n=' + n + '）' });
+    }
+  }
+  if(!candidates.length) return null;
+  candidates.sort((x, y) => (y.score - x.score) || (x.rank - y.rank));
+  return candidates[0];
+}
+
 function adaptFromFormula(parsed, match){
   st.structure = match.structure;
   st.rpN = match.n;
+  st.freeOxygen = null;
   const elements = Object.keys(parsed.counts).filter(element => element !== 'O');
   const previousRows = new Map(st.rows.map(row => [row.el, row]));
   st.rows = elements.map(element => {
@@ -678,7 +719,7 @@ function adaptFromFormula(parsed, match){
   }
   $('structure').value = st.structure;
   $('rpN').value = st.rpN;
-  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  updateStructureUI();
   updateStructureHint();
   renderSaltTable();
   const deltaNote = /[+₊−₋-](?:δ|Δ)$/i.test(st.prodFormula.replace(/\s+/g, ''))
@@ -686,6 +727,13 @@ function adaptFromFormula(parsed, match){
     : '';
   $('formulaAutoHint').textContent = '已识别为' + match.label + '；结构和晶位配比已自动适配。' + deltaNote;
 }
+function manualOxygen(){
+  const value = st.freeOxygen;
+  if(value === null || value === undefined || String(value).trim() === '') return null;
+  const number = Number(value);
+  return isFinite(number) && number > 0 ? number : null;
+}
+
 function structureInfo(){
   if(st.structure === 'rp'){
     const n = Number(st.rpN);
@@ -697,6 +745,23 @@ function structureInfo(){
   if(st.structure === 'other') return STRUCTURES.other;
   return STRUCTURES[st.structure] || STRUCTURES.perovskite;
 }
+function updateStructureUI(){
+  const free = st.structure === 'other';
+  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  $('oxygenField').classList.toggle('hidden', !free);
+  $('freeOxygen').value = (st.freeOxygen === null || st.freeOxygen === undefined) ? '' : st.freeOxygen;
+  $('addSite').disabled = free;
+  $('addSite').style.display = free ? 'none' : '';
+  const table = document.getElementById('saltTable');
+  if(table) table.classList.toggle('free-mode', free);
+  $('tableHint').textContent = free ? '自由组成：无需晶位，比例即原子个数' : '硝酸盐 / 氯化物 / 醋酸盐等均可';
+  const note = $('formulaNote');
+  if(note) note.textContent = free
+    ? '自由组成：化学式按原子个数逐元素校验；氧留空即按氧化态推出，只影响产物摩尔质量，不影响称取量。'
+    : '化学式必须与晶位组成及结构氧含量一致；摩尔质量由化学式与 IUPAC 原子量实时计算。';
+  document.querySelectorAll('#saltBody .site').forEach(select => { select.disabled = free; });
+}
+
 function updateStructureHint(){
   const structure = structureInfo();
   if(!structure){
@@ -704,7 +769,7 @@ function updateStructureHint(){
     return;
   }
   if(structure.free){
-    $('structureHint').textContent = '其他氧化物：占位比例按原子个数计，不做位点归一化；氧含量由氧化态电荷平衡推出，表格改动后自动生成化学式。';
+    $('structureHint').textContent = '其他氧化物：占位比例即原子个数，无需晶位；氧可留空，按氧化态自动推出，且不影响前驱体称取量。';
     return;
   }
   $('structureHint').textContent = 'A 位总占位量 ' + structure.A + '；B 位总占位量 ' + structure.B + '。各位点输入相对占位比例，计算时分别归一化。';
@@ -744,7 +809,7 @@ const PRESETS = {
 let st = {
   method:'edta', structure:'perovskite', rpN:1, auxExcess:0, basis:'metal', amount:2, amountUnit:'mmol',
   settings:{ fontFamily:'', fontSize:14 },
-  prodFormula:'La0.6Sr0.4MnO3', prodM:null, solvent:0,
+  prodFormula:'La0.6Sr0.4MnO3', prodM:null, solvent:0, freeOxygen:null,
   rows:[newRow('La','La(NO3)3·6H2O',0.6), newRow('Sr','Sr(NO3)2',0.4), Object.assign(newRow('Mn','Mn(NO3)2·4H2O',1), {oxidation:3.4})],
   aux: auxFor('edta')
 };
@@ -800,16 +865,22 @@ function compositionFromRows(){
   if(!rows.length) return null;
   const counts = {};
   if(structure.free){
-    let total = 0, charge = 0, complete = true;
-    rows.forEach(row => {
-      const ratio = Number(row.ratio);
-      counts[row.el] = ratio;
-      total += ratio;
-      const oxidation = (row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '') ? NaN : Number(row.oxidation);
-      if(!isFinite(oxidation)){ complete = false; } else { charge += ratio * oxidation; }
-    });
-    if(!complete || !(total > 0)) return null;
-    counts.O = charge / 2;
+    const fixedOxygen = manualOxygen();
+    if(fixedOxygen !== null){
+      rows.forEach(row => { counts[row.el] = Number(row.ratio); });
+      counts.O = fixedOxygen;
+    } else {
+      let total = 0, charge = 0, complete = true;
+      rows.forEach(row => {
+        const ratio = Number(row.ratio);
+        counts[row.el] = ratio;
+        total += ratio;
+        const oxidation = (row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '') ? NaN : Number(row.oxidation);
+        if(!isFinite(oxidation)){ complete = false; } else { charge += ratio * oxidation; }
+      });
+      if(!complete || !(total > 0)) return null;
+      counts.O = charge / 2;
+    }
   } else {
     const siteSums = { A:0, B:0 };
     rows.forEach(row => { siteSums[row.site] += Number(row.ratio); });
@@ -824,10 +895,12 @@ function freeCountsFromRows(){
   const rows = st.rows.filter(row => row.el && row.el in AW && isFinite(Number(row.ratio)) && Number(row.ratio) >= 0);
   if(!rows.length) return null;
   const counts = {};
+  rows.forEach(row => { counts[row.el] = Number(row.ratio); });
+  const fixedOxygen = manualOxygen();
+  if(fixedOxygen !== null){ counts.O = fixedOxygen; return counts; }
   let total = 0, charge = 0, complete = true;
   rows.forEach(row => {
     const ratio = Number(row.ratio);
-    counts[row.el] = ratio;
     total += ratio;
     const oxidation = (row.oxidation === null || row.oxidation === undefined || String(row.oxidation).trim() === '') ? NaN : Number(row.oxidation);
     if(!isFinite(oxidation)){ complete = false; } else { charge += ratio * oxidation; }
@@ -846,10 +919,10 @@ function formulaFromRows(counts){
   return metals.map(el => el + countSubscript(counts[el])).join('') + 'O' + countSubscript(counts.O);
 }
 
-function syncFormulaFromRows(keepStructure){
+function syncFormulaFromRows(keepStructure, force){
   if(syncingFormula) return;
   const toggle = $('autoFormula');
-  if(toggle && !toggle.checked) return;
+  if(!force && toggle && !toggle.checked) return;
   if(!structureInfo()) return;
   let counts = compositionFromRows();
   if(!counts) return;
@@ -858,16 +931,19 @@ function syncFormulaFromRows(keepStructure){
   const siteOf = element => siteMap[element] || defaultSite(element);
   // 用“比例即原子个数”的原始组成识别结构，避免被当前结构的位点归一化压掉原子计量
   const free = freeCountsFromRows();
-  const match = recognizeStructure(free || counts, siteOf);
+  let match = recognizeStructure(free || counts, siteOf);
+  if(st.structure === 'other' && free && !match) match = recognizeStructureByPartition(free);
   let hint = '';
   const currentRp = st.structure === 'rp' ? Number(st.rpN) : null;
   if(!keepStructure && match && (match.structure !== st.structure || (match.structure === 'rp' && match.n !== currentRp))){
     st.structure = match.structure;
     st.rpN = match.n;
+    if(match.assign) st.rows.forEach(row => { if(match.assign[row.el]) row.site = match.assign[row.el]; });
     $('structure').value = st.structure;
     $('rpN').value = st.rpN;
     $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
     updateStructureHint();
+    renderSaltTable();
     counts = compositionFromRows() || counts;
     hint = '已自动识别并匹配：' + match.label + '。';
   } else if(match){
@@ -914,7 +990,7 @@ function compute(){
 
   // 化学计量系数
   if(isFree){
-    // 其他氧化物：比例即原子个数，氧含量由电荷平衡推出
+    // 其他氧化物：比例即原子个数；氧可手填，留空按电荷平衡推出
     let total = 0, charge = 0, complete = true;
     activeRows.forEach(row => {
       const ratio = Number(row.ratio);
@@ -925,9 +1001,10 @@ function compute(){
     });
     out.cations = total;
     out.S = total;
-    out.oxygen = complete && total > 0 ? charge / 2 : null;
+    const fixedOxygen = manualOxygen();
+    out.oxygen = fixedOxygen !== null ? fixedOxygen : (complete && total > 0 ? charge / 2 : null);
     if(out.oxygen !== null) out.coefficients.O = out.oxygen;
-    if(!complete) out.warnings.push('氧化态未填写完整，无法推出氧含量与化学式；前驱体用量仍按总金属计算。');
+    if(out.oxygen === null) out.warnings.push('氧化态未填写完整，无法推出氧含量；请填写“氧原子数 O”，或补全氧化态。');
   } else {
     const siteSums = { A:0, B:0 };
     activeRows.forEach(row => { siteSums[row.site] += Number(row.ratio); });
@@ -1104,7 +1181,7 @@ function buildSaltRow(r, idx){
   if(dlId) saltIn.setAttribute('list', dlId);
 
   elIn.setAttribute('list', 'libElList');
-  elIn.value = r.el; siteIn.value = r.site || defaultSite(r.el); saltIn.value = r.salt; ratioIn.value = r.ratio; oxidationIn.value = r.oxidation;
+  elIn.value = r.el; siteIn.value = r.site || defaultSite(r.el); siteIn.disabled = st.structure === 'other'; saltIn.value = r.salt; ratioIn.value = r.ratio; oxidationIn.value = r.oxidation;
   formIn.value = r.form; purIn.value = r.form === 'solution' ? r.conc : r.purity; denIn.value = r.density;
   syncForm(r, formIn, purIn, denIn);
 
@@ -1171,6 +1248,7 @@ function renderSaltTable(){
   saltBody.innerHTML = '';
   rowRefs.length = 0;
   st.rows.forEach(r => saltBody.appendChild(buildSaltRow(r)));
+  if($('tableHint')) updateStructureUI();
 }
 
 function renderAuxTable(){
@@ -1412,7 +1490,7 @@ function applyPreset(key){
   st.rpN = 1;
   $('structure').value = st.structure;
   $('rpN').value = st.rpN;
-  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  updateStructureUI();
   updateStructureHint();
   if(key === 'LSM') st.rows.find(row => row.el === 'Mn').oxidation = 3.4;
   if(key === 'La2NiO4') st.rows.find(row => row.el === 'Ni').oxidation = 2;
@@ -1517,11 +1595,11 @@ function addElementRow(el, site){
   });
   $('structure').value = st.structure;
   $('rpN').value = st.rpN;
-  $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+  updateStructureUI();
   updateStructureHint();
   $('structure').addEventListener('change', e => {
     st.structure = e.target.value;
-    $('rpNField').classList.toggle('hidden', st.structure !== 'rp');
+    updateStructureUI();
     updateStructureHint();
     paint();
     syncFormulaFromRows(true);
@@ -1531,6 +1609,12 @@ function addElementRow(el, site){
     updateStructureHint();
     paint();
     syncFormulaFromRows(true);
+  });
+  $('freeOxygen').value = (st.freeOxygen === null || st.freeOxygen === undefined) ? '' : st.freeOxygen;
+  $('freeOxygen').addEventListener('input', e => {
+    st.freeOxygen = e.target.value.trim() === '' ? null : Number(e.target.value);
+    paint();
+    syncFormulaFromRows(true, true);
   });
   $('auxExcess').value = st.auxExcess;
   $('auxExcess').addEventListener('input', e => { st.auxExcess = Number(e.target.value) || 0; paint(); });
@@ -1621,7 +1705,23 @@ function addElementRow(el, site){
     }
     const match = recognizeStructure(parsed.counts);
     if(!match){
-      $('formulaAutoHint').textContent = '暂未匹配到常见钙钛矿、尖晶石或 RP 相化学计量；当前结构和配比未更改。';
+      if(st.structure === 'other'){
+        const els = Object.keys(parsed.counts).filter(element => element !== 'O' && element in AW);
+        if(els.length){
+          st.rows = els.map(element => {
+            const row = st.rows.filter(item => item.el === element)[0] || newRow(element, libFormulaFor(element) || SALT_DEFAULTS[element] || '', 1);
+            row.ratio = parsed.counts[element];
+            return row;
+          });
+          st.freeOxygen = parsed.counts.O || null;
+          renderSaltTable();
+          updateStructureUI();
+          $('formulaAutoHint').textContent = '自由组成：已按化学式更新各元素原子数与氧原子数。';
+          syncFormulaFromRows(true, true);
+          return;
+        }
+      }
+      $('formulaAutoHint').textContent = '暂未匹配到常见钙钛矿、尖晶石或 RP 相化学计量。若要严格按此化学式投料，请选择“其他氧化物（自由组成）”，或点“从产物化学式载入配比”（会自动切换）。';
       return;
     }
     adaptFromFormula(parsed, match);
@@ -1669,10 +1769,20 @@ function addElementRow(el, site){
       paint();
       return;
     }
-    st.rows = els.map(e => newRow(e, SALT_DEFAULTS[e] || '', p.counts[e]));
-    if(st.structure !== 'perovskite' && st.rows.every(row => row.site !== 'A')) st.rows[0].site = 'A';
+    // 未匹配标准计量：按化学式原样转为“其他氧化物（自由组成）”，不再强制 A/B 归一化
+    st.rows = els.map(e => newRow(e, libFormulaFor(e) || SALT_DEFAULTS[e] || '', p.counts[e]));
+    st.structure = 'other';
+    st.freeOxygen = p.counts.O || null;
+    $('structure').value = 'other';
+    $('rpN').value = st.rpN;
+    st.prodM = null;
+    $('prodM').value = '';
+    $('prodM').placeholder = p.M.toFixed(2) + '（自动）';
+    $('formulaAutoHint').textContent = '该化学式不属于标准钙钛矿 / 尖晶石 / RP 计量，已切换为“其他氧化物”，按原子个数计算；未写氧时按氧化态推出。';
     renderSaltTable();
-    paint();
+    updateStructureUI();
+    updateStructureHint();
+    syncFormulaFromRows(true, true);
   });
 
   // 预设

@@ -30,7 +30,7 @@ It is intended for research groups preparing perovskite, spinel and RP-type oxid
 
 ### Composition design
 
-- Four structure options: perovskite, spinel, RP, and **other oxides (free composition)** — the first three use **independent A-site and B-site normalization** (relative occupancies are normalized per site, not globally); free composition treats the occupancy column as literal atom counts.
+- Four structure options: perovskite, spinel, RP, and **other oxides (free composition)** — the first three use **independent A-site and B-site normalization** (relative occupancies are normalized per site, not globally); free composition hides the A/B column entirely and treats the occupancy column as literal atom counts, so `Sn0.95Ce0.05O` is entered exactly as written.
 - **Automatic formula generation**: after elements are added or edited in the table, the target product formula in section 2 and the structure class in section 1 are rebuilt and matched automatically (cubic perovskite / spinel / RP / other oxide). Can be switched off with the *generate formula from table* checkbox.
 - Editable **oxidation state** per cation, with an automatic estimate for a single B-site cation once the A-site charge is known.
 - **Charge-balance check** against the structure oxygen content; the residual is reported and a warning is raised when it is out of tolerance.
@@ -90,7 +90,7 @@ Three interchangeable bases:
 
 RP phases require an **integer n ≥ 1**; n = 1 (A₂BO₄, e.g. La₂NiO₄) and n = 2 (A₃B₂O₇) are the common cases.
 
-**Other oxides (free composition)** are for non-stoichiometric, doped, deficient or multi-phase target compositions that do not fit ABO₃ / AB₂O₄ / RP: the occupancy column is read as the literal number of atoms per formula unit (e.g. `Ba1 Zr1 Zn0.02`), no site normalization is applied, and the oxygen count is derived from electroneutrality, `O = Σ(cᵢ zᵢ)/2`. The derived formula is written to the product-formula field and used for the molar mass; the summary reports 阳离子总数 Σc instead of A + B.
+**Other oxides (free composition)** are for non-stoichiometric, doped, deficient or multi-phase target compositions that do not fit ABO₃ / AB₂O₄ / RP: the occupancy column is read as the literal number of atoms per formula unit (e.g. `Ba1 Zr1 Zn0.02`, `Sn0.95 Ce0.05`), the A/B column is hidden and no site normalization is applied. The oxygen count is either typed directly in the **oxygen atoms O** field (exact, e.g. `Sn0.95Ce0.05O` → O = 1) or, if that field is left empty, derived from electroneutrality, `O = Σ(cᵢ zᵢ)/2`. The formula is written to the product-formula field and used for the molar mass; the summary reports 阳离子总数 Σc instead of A + B. Clicking **Load composition from product formula** with a formula that is not a standard perovskite / spinel / RP switches to this mode automatically and keeps the oxygen count from the formula. If the free atom counts do reproduce ABO₃, AB₂O₄ or Aₙ₊₁BₙO₃ₙ₊₁ exactly, the structure is switched back and A/B sites are assigned by element chemistry.
 
 Automatic recognition from the product formula uses exact stoichiometry: A-site total = 1, B-site total = 1, O = 3 (perovskite); A = 1, B = 2, O = 4 (spinel); A = n + 1, B = n, O = 3n + 1 (RP). Anything that does not match exactly leaves the structure unchanged and shows a notice.
 
@@ -211,7 +211,7 @@ Selecting **solution** for Mn(NO₃)₂·4H₂O with 50 wt% and ρ = 1.54 g/mL g
 - **RP phases** accept integer n only; intergrowth or mixed n = 1/2 composites are not modeled.
 - **Anion doping, A-site deficiency, δ non-stoichiometry** are not part of the mass balance; a δ-ended formula is accepted for molar mass only, with a note.
 - **Non-nitrate precursors are handled as mass sources only.** The counter-anion (Cl⁻, CH₃COO⁻, alkoxide) is not modeled: no side products, no anion removal step, no effect on the combustion redox balance. Chlorides and acetates may need extra calcination or washing — the calculator does not judge that.
-- **Free-composition oxides** take the oxygen content from the oxidation states you enter; if a cation's oxidation state is left empty, the oxygen count and product formula cannot be derived, and only the metal masses are reported.
+- **Free-composition oxides** use the oxygen atoms you type; if the O field is empty, oxygen is derived from the oxidation states — leave a cation oxidation state blank and neither the oxygen count nor the product formula can be derived (the metal masses are still reported). A manually typed O that does not match the entered oxidation states raises the charge-balance warning instead of being silently corrected.
 - **No upper bound on scale.** Very large batches are arithmetically fine but practically limited by solubility.
 - **Local data only.** Inputs live in the browser's `localStorage`; nothing is uploaded. Clearing site data resets the sheet.
 - **Safety.** Nitrates are oxidizers and several hydrates are hygroscopic or shock-sensitive when dried with organics; combustion runs release NOₓ/CO₂. This tool only computes masses — it does not replace a risk assessment or standard lab practice.
@@ -237,7 +237,7 @@ Deployment: GitHub Pages serves `index.html` from the `main` branch.
 
 - Arbitrary metal precursors: type any formula (chloride, acetate, alkoxide, oxynitrate…); molar mass shown in a new **M** column.
 - Persistent **precursor library** with per-element dropdowns, apply-to-row, delete and bulk save from the table.
-- New structure option **Other oxide (free composition)**: atom-count ratios, no site normalization, oxygen from charge balance, Σc in the summary.
+- New structure option **Other oxide (free composition)**: A/B sites hidden from the table, atom-count ratios, explicit **oxygen atom** field (or oxygen from charge balance when left empty), Σc in the summary; non-standard formulas loaded from the target-formula field switch to this mode automatically.
 - Automatic product-formula generation and structure matching from the element table, with an opt-out checkbox.
 - Per-row validation: invalid rows are flagged individually instead of aborting the whole calculation.
 - Expanded default oxidation states and element menu (Ti, V, Nb, Ta, Mo, W, In, Sn, Sb…).
@@ -277,3 +277,5 @@ Released under the **MIT License**. See [LICENSE](LICENSE) for the full text.
 ## Disclaimer
 
 This software is a stoichiometry aid for research use. The authors give no warranty of fitness for a particular synthesis and accept no liability for experimental outcomes. Verify every number against your own reagents and protocol before weighing.
+
+> （注：部分内容由豆包 AI 生成）
